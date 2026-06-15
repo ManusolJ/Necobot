@@ -1,6 +1,9 @@
-import { LoggerOptions, pino } from "pino";
-import { env } from "./env.js";
 import { DEV_ENV } from "@shared/consts/config.constants.js";
+
+import { env } from "./env.js";
+
+import { pino } from "pino";
+import type { LoggerOptions } from "pino";
 
 const loggerOptions: LoggerOptions = {
   level: env.LOG_LEVEL,
