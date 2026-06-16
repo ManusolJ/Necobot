@@ -4,7 +4,8 @@
   "description": "Discord bot with necoarc personality and multiple features",
   "main": "dist/app.js",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "build": "tsc && tsc-alias",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -19,6 +20,7 @@
   "type": "module",
   "dependencies": {
     "@sapphire/framework": "^5.5.0",
+    "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/shapeshift": "^4.0.0",
     "better-sqlite3": "^12.10.0",
     "bullmq": "^5.78.0",
@@ -26,6 +28,7 @@
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "ioredis": "^5.11.1",
     "luxon": "^3.7.2",
     "pino": "^10.3.1",
     "undici": "^8.4.1"
