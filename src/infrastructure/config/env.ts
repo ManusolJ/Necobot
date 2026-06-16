@@ -14,9 +14,10 @@ const ENVIRONMENT_SCHEMA = s.object({
   NODE_ENV: s.string().default(DEV_ENV),
   LOG_LEVEL: s.string().default(DEBUG_LOG_LEVEL),
 
+  BOT_TOKEN: s.string().lengthGreaterThan(0),
+  CLIENT_ID: s.string().lengthGreaterThan(0),
+
   DISCORD_DEV_GUILD_ID: s.string().optional(),
-  DISCORD_TOKEN: s.string().lengthGreaterThan(0),
-  DISCORD_APP_ID: s.string().lengthGreaterThan(0),
 
   DATABASE_PATH: s.string().default(DATABASE_DEFAULT_PATH),
 
@@ -24,16 +25,19 @@ const ENVIRONMENT_SCHEMA = s.object({
   REDIS_HOST: s.string().default(REDIS_DEFAULT_HOST),
 });
 
+const emptyToUndefined = (value: string | undefined): string | undefined =>
+  value === "" ? undefined : value;
+
 export const env = ENVIRONMENT_SCHEMA.parse({
-  NODE_ENV: process.env.NODE_ENV,
-  LOG_LEVEL: process.env.LOG_LEVEL,
+  NODE_ENV: emptyToUndefined(process.env.NODE_ENV),
+  LOG_LEVEL: emptyToUndefined(process.env.LOG_LEVEL),
 
-  DISCORD_TOKEN: process.env.DISCORD_TOKEN,
-  DISCORD_APP_ID: process.env.DISCORD_APP_ID,
-  DISCORD_DEV_GUILD_ID: process.env.DISCORD_DEV_GUILD_ID,
+  BOT_TOKEN: emptyToUndefined(process.env.BOT_TOKEN),
+  CLIENT_ID: emptyToUndefined(process.env.CLIENT_ID),
+  DISCORD_DEV_GUILD_ID: emptyToUndefined(process.env.DISCORD_DEV_GUILD_ID),
 
-  DATABASE_PATH: process.env.DATABASE_PATH,
+  DATABASE_PATH: emptyToUndefined(process.env.DATABASE_PATH),
 
-  REDIS_HOST: process.env.REDIS_HOST,
-  REDIS_PORT: process.env.REDIS_PORT,
+  REDIS_HOST: emptyToUndefined(process.env.REDIS_HOST),
+  REDIS_PORT: emptyToUndefined(process.env.REDIS_PORT),
 });
