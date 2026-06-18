@@ -4,7 +4,7 @@ set -euo pipefail
 echo "=== Deploying in process ==="
 
 echo "[1/5] Pulling latest changes..."
-git pull origin master
+git pull origin main
 
 echo "[2/5] Stopping bot..."
 docker compose stop bot
