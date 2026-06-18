@@ -20,7 +20,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 COPY assets ./assets
-COPY migrations db/migrations
+COPY db/migrations ./db/migrations
 
 RUN addgroup -S botuser && adduser -S botuser -G botuser
 USER botuser
