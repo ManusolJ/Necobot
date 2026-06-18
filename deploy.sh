@@ -12,9 +12,6 @@ docker compose stop bot
 echo "[3/5] Rebuilding and starting bot..."
 docker compose up -d --build --no-deps bot
 
-echo "[4/5] Running database migrations..."
-docker compose exec bot npm run db:migrate
-
 echo "[5/5] Cleaning up old images..."
 docker image prune -f
 

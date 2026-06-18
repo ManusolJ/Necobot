@@ -12,6 +12,8 @@ import { GatewayIntentBits } from "discord.js";
 import { SapphireClient } from "@sapphire/framework";
 
 import "@sapphire/plugin-scheduled-tasks/register";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { db } from "@infrastructure/database/client.js";
 
 const currentPath = dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +52,8 @@ client.stores.get("commands").registerPath(commandPath);
 client.stores.get("listeners").registerPath(eventsPath);
 client.stores.get("preconditions").registerPath(guardsPath);
 client.stores.get("scheduled-tasks").registerPath(scheduledPath);
+
+migrate(db, { migrationsFolder: "./db/migrations" });
 
 try {
   await client.login(env.BOT_TOKEN);
