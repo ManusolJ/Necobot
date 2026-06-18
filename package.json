@@ -14,7 +14,7 @@
     "start": "node dist/app.js",
     "dev": "tsx watch src/app.ts",
     "db:migrate": "drizzle-kit migrate",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate --name"
   },
   "author": "Manuel Soler Juan",
   "type": "module",
