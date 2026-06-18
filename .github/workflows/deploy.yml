@@ -1,38 +1,38 @@
-name: deploy
-
+name: Deploy
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: deploy
-  cancel-in-progress: false
-
 jobs:
-  deploy:
-    name: deploy to home server
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Install cloudflared
         run: |
-          curl -L --output cloudflared.deb \
-            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared.deb
-
-      - name: Setup SSH
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          cat > ~/.ssh/config <<EOF
-          Host deploy.necobotultimus.org
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          echo "Host deploy.necobotultimus.org
             ProxyCommand cloudflared access ssh --hostname %h
-            StrictHostKeyChecking no
-          EOF
-
+            StrictHostKeyChecking no" > ~/.ssh/config
       - name: Deploy
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@deploy.necobotultimus.org \
-            "cd ~/necobot && bash deploy.sh"
+        run: ssh ${{ secrets.SERVER_USER }}@deploy.necobotultimus.org "cd ~/necobot && bash deploy.sh"
