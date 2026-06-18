@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1781789131072,
+      "tag": "0000__guild_settings_table_creation",
+      "breakpoints": true
+    }
+  ]
+}
