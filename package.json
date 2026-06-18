@@ -6,15 +6,15 @@
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "build": "tsc && tsc-alias",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "start": "node dist/app.js",
     "dev": "tsx watch src/app.ts",
-    "db:migrate": "drizzle-kit migrate --config=db/config/drizzle.config.ts",
-    "db:generate": "drizzle-kit generate --config=db/config/drizzle.config.ts"
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate"
   },
   "author": "Manuel Soler Juan",
   "type": "module",
@@ -49,6 +49,6 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.28.1"
   }
 }
