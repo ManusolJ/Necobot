@@ -1,4 +1,4 @@
-import { env } from "@infrastructure/config/env.js";
+import { env } from "@infrastructure/config/env.config.js";
 
 import type { ChatInputCommandInteraction } from "discord.js";
 

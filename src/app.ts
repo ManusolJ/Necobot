@@ -1,6 +1,6 @@
-import { env } from "@infrastructure/config/env.js";
-
-import { logger } from "@infrastructure/config/logger.js";
+import { db } from "@infrastructure/database/client.js";
+import { env } from "@infrastructure/config/env.config.js";
+import { logger } from "@infrastructure/config/logger.config.js";
 
 import { getLogLevel } from "@shared/utils/get-log-level.util.js";
 
@@ -9,11 +9,10 @@ import { dirname, join } from "node:path";
 
 import { GatewayIntentBits } from "discord.js";
 
+import "@sapphire/plugin-scheduled-tasks/register";
 import { SapphireClient } from "@sapphire/framework";
 
-import "@sapphire/plugin-scheduled-tasks/register";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { db } from "@infrastructure/database/client.js";
 
 const currentPath = dirname(fileURLToPath(import.meta.url));
 

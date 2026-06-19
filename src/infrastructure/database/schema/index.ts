@@ -1,1 +1,1 @@
-export * from "./guild.js";
+export * from "./guild.schema.js";
