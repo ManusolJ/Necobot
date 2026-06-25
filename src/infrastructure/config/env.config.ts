@@ -25,8 +25,7 @@ const ENVIRONMENT_SCHEMA = s.object({
   REDIS_HOST: s.string().default(REDIS_DEFAULT_HOST),
 });
 
-const emptyToUndefined = (value: string | undefined): string | undefined =>
-  value === "" ? undefined : value;
+const emptyToUndefined = (value: string | undefined): string | undefined => (value === "" ? undefined : value);
 
 export const env = ENVIRONMENT_SCHEMA.parse({
   NODE_ENV: emptyToUndefined(process.env.NODE_ENV),
