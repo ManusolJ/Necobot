@@ -1,12 +1,11 @@
-import { db } from "@infrastructure/database/client.js";
+import { GuildNotConfiguredError } from "@infrastructure/errors/domain.errors.js";
 
-import { guildSettings } from "@infrastructure/database/schema/guild.schema.js";
-
-import { eq } from "drizzle-orm";
+import { getGuildSettings } from "@core/services/guild.service.js";
 
 import { Precondition } from "@sapphire/framework";
-
 import type { ChatInputCommandInteraction } from "discord.js";
+
+import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 
 export class GuildConfiguredPrecondition extends Precondition {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
@@ -14,15 +13,13 @@ export class GuildConfiguredPrecondition extends Precondition {
       return this.error({ message: "This bot is guild-only." });
     }
 
-    const settings = db
-      .select()
-      .from(guildSettings)
-      .where(eq(guildSettings.guildId, interaction.guildId))
-      .get();
+    const settings = getGuildSettings(interaction.guildId);
 
     if (!settings || settings.setupCompletedAt == null) {
+      const err = new GuildNotConfiguredError(interaction.guildId);
       return this.error({
-        message: "An admin must run `/setup` before the bot can be used here.",
+        message: getUserErrorMessage(err.code),
+        context: { code: err.code },
       });
     }
 
