@@ -79,3 +79,37 @@ export function applyGuildUserDelta(input: {
 
   return updated.get();
 }
+
+export function recordBegAttempt(input: {
+  guildId: string;
+  userId: string;
+  pointsEarned: number;
+}): GuildUser | undefined {
+  const { guildId, userId, pointsEarned } = input;
+  const now = new Date();
+
+  const initialValues: GuildUserInsert = {
+    guildId,
+    userId,
+    points: pointsEarned,
+    historicalPoints: pointsEarned,
+    timesBegged: 1,
+    lastBeggedAt: now,
+  };
+
+  const updated = db
+    .insert(guildUsers)
+    .values(initialValues)
+    .onConflictDoUpdate({
+      target: [guildUsers.guildId, guildUsers.userId],
+      set: {
+        points: sql`${guildUsers.points} + ${pointsEarned}`,
+        historicalPoints: sql`${guildUsers.historicalPoints} + ${pointsEarned}`,
+        timesBegged: sql`${guildUsers.timesBegged} + 1`,
+        lastBeggedAt: now,
+      },
+    })
+    .returning();
+
+  return updated.get();
+}

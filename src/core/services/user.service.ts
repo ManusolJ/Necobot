@@ -1,7 +1,12 @@
 import type { GuildUser } from "@infrastructure/database/schema/user.schema.js";
 import { GuildUserPersistError } from "@infrastructure/errors/domain.errors.js";
 
-import { applyGuildUserDelta, findGuildUser, upsertGuildUser } from "@core/repositories/user.repository.js";
+import {
+  findGuildUser,
+  upsertGuildUser,
+  recordBegAttempt,
+  applyGuildUserDelta,
+} from "@core/repositories/user.repository.js";
 
 import type { EarnAction } from "@shared/types/earn-action.type.js";
 import type { AwardInput } from "@shared/interfaces/award-input.interface.js";
@@ -42,5 +47,13 @@ export function awardPoints(input: AwardInput): GuildUser {
     throw new GuildUserPersistError(input.guildId, input.userId);
   }
 
+  return result;
+}
+
+export function recordBeg(guildId: string, userId: string, pointsEarned: number): GuildUser {
+  const result = recordBegAttempt({ guildId, userId, pointsEarned });
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
   return result;
 }
