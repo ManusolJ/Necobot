@@ -1,8 +1,9 @@
 import { awardPoints } from "@core/services/user.service.js";
-import { ApplicationCommandRegistry, Awaitable, ChatInputCommand, Command } from "@sapphire/framework";
-import { AwardInput } from "@shared/interfaces/award-input.interface.js";
+import type { ApplicationCommandRegistry, Awaitable, ChatInputCommand } from "@sapphire/framework";
+import { Command } from "@sapphire/framework";
+import type { AwardInput } from "@shared/interfaces/award-input.interface.js";
 import { pointGenerator } from "@shared/utils/point-generator.util.js";
-import { ChatInputCommandInteraction } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 
 const MINIMUM_REWARD = 1;
 const MAXIMUM_REWARD = 100;
@@ -17,10 +18,7 @@ export class BegCommand extends Command {
     );
   }
 
-  public override async chatInputRun(
-    interaction: ChatInputCommandInteraction,
-    context: ChatInputCommand.RunContext,
-  ): Promise<void> {
+  public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const userId = interaction.user.id;
     const guildId = interaction.guildId!;
 

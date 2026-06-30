@@ -3,8 +3,8 @@ import { GuildUserPersistError } from "@infrastructure/errors/domain.errors.js";
 
 import { applyGuildUserDelta, findGuildUser, upsertGuildUser } from "@core/repositories/user.repository.js";
 
-import { EarnAction } from "@shared/types/earn-action.type.js";
-import { AwardInput } from "@shared/interfaces/award-input.interface.js";
+import type { EarnAction } from "@shared/types/earn-action.type.js";
+import type { AwardInput } from "@shared/interfaces/award-input.interface.js";
 
 const COUNTER_BY_ACTION = {
   beg: "timesBegged",

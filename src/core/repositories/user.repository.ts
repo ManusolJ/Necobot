@@ -2,7 +2,7 @@ import { db } from "@infrastructure/database/client.js";
 import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
 import type { GuildUser, GuildUserInsert } from "@infrastructure/database/schema/user.schema.js";
 
-import { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
+import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
 import { and, eq, sql } from "drizzle-orm";
 

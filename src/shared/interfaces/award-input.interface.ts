@@ -1,4 +1,4 @@
-import { EarnAction } from "@shared/types/earn-action.type.js";
+import type { EarnAction } from "@shared/types/earn-action.type.js";
 
 export interface AwardInput {
   guildId: string;
