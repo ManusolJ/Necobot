@@ -1,9 +1,13 @@
 import { awardPoints } from "@core/services/user.service.js";
-import type { ApplicationCommandRegistry, Awaitable, ChatInputCommand } from "@sapphire/framework";
-import { Command } from "@sapphire/framework";
-import type { AwardInput } from "@shared/interfaces/award-input.interface.js";
+
 import { pointGenerator } from "@shared/utils/point-generator.util.js";
+import type { AwardInput } from "@shared/interfaces/award-input.interface.js";
+
+import { Command } from "@sapphire/framework";
+
 import type { ChatInputCommandInteraction } from "discord.js";
+
+import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 const MINIMUM_REWARD = 1;
 const MAXIMUM_REWARD = 100;
