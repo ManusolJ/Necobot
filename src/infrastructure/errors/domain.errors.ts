@@ -17,3 +17,9 @@ export class GuildNotConfiguredError extends AppError {
     super("guild_not_configured", { context: { guildId } });
   }
 }
+
+export class GuildUserPersistError extends AppError {
+  public constructor(guildId: string, userId: string, cause?: unknown) {
+    super("guild_user_persist_failed", { context: { guildId, userId }, cause });
+  }
+}
