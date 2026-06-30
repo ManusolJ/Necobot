@@ -8,6 +8,13 @@
       "when": 1781789131072,
       "tag": "0000__guild_settings_table_creation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782820079978,
+      "tag": "0001_user_table_creation",
+      "breakpoints": true
     }
   ]
 }
