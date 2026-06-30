@@ -47,6 +47,12 @@ const client = new SapphireClient({
   },
 });
 
+const shutdown = async () => {
+  logger.info("Shutting Down");
+  await client.destroy();
+  process.exit(0);
+};
+
 client.stores.get("commands").registerPath(commandPath);
 client.stores.get("listeners").registerPath(eventsPath);
 client.stores.get("preconditions").registerPath(guardsPath);
@@ -60,3 +66,6 @@ try {
   logger.fatal({ error }, "Failed to start the bot");
   process.exit(1);
 }
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
