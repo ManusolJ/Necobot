@@ -1,5 +1,6 @@
-import type { GuildSettings, GuildSettingsInsert } from "@infrastructure/database/schema/guild.schema.js";
 import { GuildSettingsPersistError } from "@infrastructure/errors/domain.errors.js";
+
+import type { GuildSettings, GuildSettingsInsert } from "@infrastructure/database/schema/guild.schema.js";
 
 import { findGuildSettings, upsertGuildSettings } from "@core/repositories/guild.repository.js";
 

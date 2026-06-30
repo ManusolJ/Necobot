@@ -20,7 +20,7 @@ const ENVIRONMENT_SCHEMA = s.object({
 
   DATABASE_PATH: s.string().default(DATABASE_DEFAULT_PATH),
 
-  REDIS_PORT: s.string().default(REDIS_DEFAULT_PORT),
+  REDIS_PORT: s.string().regex(/^\d+$/).default(REDIS_DEFAULT_PORT),
   REDIS_HOST: s.string().default(REDIS_DEFAULT_HOST),
 });
 
@@ -30,7 +30,7 @@ export const env = ENVIRONMENT_SCHEMA.parse({
   NODE_ENV: emptyToUndefined(process.env.NODE_ENV),
   LOG_LEVEL: emptyToUndefined(process.env.LOG_LEVEL),
 
-  CLIENT_ID: emptyToUndefined(process.env.CLIENT_ID),
+  BOT_TOKEN: emptyToUndefined(process.env.BOT_TOKEN),
   DISCORD_DEV_GUILD_ID: emptyToUndefined(process.env.DISCORD_DEV_GUILD_ID),
 
   DATABASE_PATH: emptyToUndefined(process.env.DATABASE_PATH),
