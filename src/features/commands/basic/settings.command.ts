@@ -28,7 +28,8 @@ export class SettingsCommand extends Command {
               { name: ">", value: ">" },
               { name: ".", value: "." },
             ),
-        ),
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     );
   }
 
