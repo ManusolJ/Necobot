@@ -15,7 +15,6 @@ const ENVIRONMENT_SCHEMA = s.object({
   LOG_LEVEL: s.string().default(DEBUG_LOG_LEVEL),
 
   BOT_TOKEN: s.string().lengthGreaterThan(0),
-  CLIENT_ID: s.string().lengthGreaterThan(0),
 
   DISCORD_DEV_GUILD_ID: s.string().optional(),
 
@@ -31,7 +30,6 @@ export const env = ENVIRONMENT_SCHEMA.parse({
   NODE_ENV: emptyToUndefined(process.env.NODE_ENV),
   LOG_LEVEL: emptyToUndefined(process.env.LOG_LEVEL),
 
-  BOT_TOKEN: emptyToUndefined(process.env.BOT_TOKEN),
   CLIENT_ID: emptyToUndefined(process.env.CLIENT_ID),
   DISCORD_DEV_GUILD_ID: emptyToUndefined(process.env.DISCORD_DEV_GUILD_ID),
 
