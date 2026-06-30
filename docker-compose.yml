@@ -1,6 +1,5 @@
 services:
   bot:
-    #REMOVE ONCE BUG IS CONFIRMED
     user: "1000:1000"
     build: .
     env_file: .env
