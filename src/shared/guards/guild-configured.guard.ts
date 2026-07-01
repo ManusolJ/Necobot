@@ -7,6 +7,12 @@ import type { ChatInputCommandInteraction } from "discord.js";
 
 import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 
+declare module "@sapphire/framework" {
+  interface Preconditions {
+    GuildConfigured: never;
+  }
+}
+
 export class GuildConfiguredPrecondition extends Precondition {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) {

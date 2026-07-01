@@ -15,6 +15,13 @@
       "when": 1782820079978,
       "tag": "0001_user_table_creation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782896604996,
+      "tag": "0002_add_beg_cooldown_and_retry_role",
+      "breakpoints": true
     }
   ]
 }

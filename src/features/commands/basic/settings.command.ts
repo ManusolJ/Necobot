@@ -19,7 +19,7 @@ export class SettingsCommand extends Command {
         )
         .addStringOption((option) =>
           option
-            .setName("prefijo")
+            .setName("prefix")
             .setDescription("El prefijo para uso de comandos legacy (Predeterminado: !).")
             .setRequired(false)
             .addChoices(
@@ -30,7 +30,7 @@ export class SettingsCommand extends Command {
             ),
         )
         .addRoleOption((option) =>
-          option.setName("rol").setDescription("El rol especial para seguidores del bot").setRequired(false),
+          option.setName("role").setDescription("El rol especial para seguidores del bot").setRequired(false),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     );
@@ -39,7 +39,7 @@ export class SettingsCommand extends Command {
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     const mainChannel = interaction.options.getChannel("main_channel", true, [ChannelType.GuildText]);
     const prefix = interaction.options.getString("prefix", false);
-    const role = interaction.options.getRole("rol", false);
+    const roleId = interaction.options.getRole("role", false)?.id ?? null;
     const bot = await interaction.guild?.members.fetchMe();
 
     if (!bot) {
@@ -62,7 +62,7 @@ export class SettingsCommand extends Command {
       guildId: interaction.guildId!,
       mainChannelId: mainChannel.id,
       prefix: prefix ?? undefined,
-      begRetryRoleId: role?.id,
+      begRetryRoleId: roleId,
     });
 
     await interaction.reply({

@@ -1,25 +1,61 @@
-export const BEG_SUCCESS: readonly string[] = [
-  "¡Vaya! Has conseguido **{amount}** puntos. No lo gastes todo de golpe.",
-  "Toma, **{amount}** puntos. Que sean bien usados.",
-  "Aquí tienes, **{amount}** puntos. No te acostumbres.",
-  "Bueno, te doy **{amount}** puntos. Pero solo porque me das pena.",
+export const BEG_FAIL: string[] = [
+  "¡Ni rogando lograste algo, nyaha~!",
+  "Ni vendiendo tu alma, {user}... triste.",
+  "Menos suerte que un furro en juicio divino.",
+  "Un fallo. En MI presencia. Qué predecible, {user}.",
+  "¿Puntos? ¿Para ti? Nyaha~ qué buen chiste, {user}.",
+  "Nyaha~ tira otra vez... ah, espera, no puedes. Sufre, {user}.",
+  "Nada, cero, {user}. Ni las migajas del suelo son para ti hoy.",
+  "Imagina fallar en MENDIGAR, {user}. No tienes que imaginarlo.",
+  "Nyaha~ los dados han hablado y dicen que no te quieren, {user}.",
+  "Has fallado tan fuerte que hasta yo he sentido vergüenza ajena, {user}.",
+  "Burunyaa~ eso ha sido tan patético que casi te doy puntos por pena. Casi.",
+  "Nyaha~ has fallado tan fuerte que hay que inventar una nueva unidad de medida, {user}.",
 ];
 
-export const BEG_FAIL: readonly string[] = [
-  "Hoy no tengo nada para ti. Vuelve mañana.",
-  "Pues nada, hoy te quedas sin nada.",
-  "Lo siento, mejor suerte la próxima.",
-  "Nada para ti. Que te zurzan.",
+export const BEG_RETRY: string[] = [
+  `Fallaste! Menuda skill iss- Ah, espera... Que eres uno de mis fieles. Venga, otro intento...`,
+  `Patético, {user}. PERO... el emblema del culto habla más alto que tu incompetencia. Venga, otra tirada.`,
+  `Nyaha~ qué fallo tan bochornoso, {user}. Bueno, la letra pequeña del pacto sagrado dice reintento por dia.`,
+  `Nyaha~ ¡Vaya desast- Oh! Ese tatuaje ritual... Eres de los míos. Shhh, que nadie nos vea. Tira de nuevo, elegido.`,
+  `Uf, {user}, casi te niego los puntos y todo. Menos mal que llevas la marca. Segunda oportunidad, no la desperdicies.`,
+  `Fallaste como un plebeyo, {user}. Pero los plebeyos no llevan tu colgante. Venga, segunda oportunidad, no me hagas arrepentirme...`,
+  `Wow, {user}, eso ha sido lamentab- Un momento... ¿Esa túnica? ¿Ese olor a incienso barato? ¡Eres de la secta! Anda, tira otra vez...`,
+  `{user}, eso ha sido penoso. PENOSO. Pero... los fieles tienen ventajas de suscripción premium. Venga, otra tirada, ¡y esta vez pon ganas!`,
+  `Un fallo espectacular, {user}. Normalmente me reiría y seguiría, PERO... la membresía del culto incluye reintentos. Letra pequeña. Venga, otra vez.`,
+  `¡Oh, un fallo! Pero no te preocupes, mi fiel seguidor. Aquí tienes otra oportunidad para demostrar tu valía. ¡Vamos, inténtalo de nuevo y muestra tu devoción al caos!`,
+  `¡Ni siquiera tus poderes ocultos te han salvado esta vez, cultista! Pero no te preocupes, aquí tienes otra oportunidad para demostrar tu lealtad. ¡Vamos, inténtalo de nuevo!`,
 ];
 
-export const BEG_RETRY: readonly string[] = [
-  "Has fallado... pero te daré otra oportunidad. No la desperdicies.",
-  "Bueno, va, una más. Por ser tú.",
-  "Vaya, vaya. Venga, otra ronda.",
+export const BEG_SUCCESS: string[] = [
+  `¿Pidiendo puntos, {user}~? Qué patético... Pero está bien, toma **{amount}**.`,
+  `Ten tus **{amount}** puntos, {user}. Y por favor, no me hagas escenitas hasta mañana.`,
+  `{user}, esto no es caridad, es inversión en caos. Toma tus **{amount}** puntos. No me decepciones.`,
+  `Burunya~ tus súplicas me alimentan, {user}. Aquí tienes **{amount}**. Úsalos con irresponsabilidad.`,
+  `Mira {user}, no me das pena, me das contenido. Toma **{amount}** puntos. Ahora baila, pequeño bufón.`,
+  `¿Otra vez pidiendo, {user}? Qué cringe... Toma **{amount}**. Y recuerda: el caos no se mendiga, se provoca.`,
+  `Una súplica más y me transformo en Hacienda. Aquí tienes **{amount}**, {user}. Pero no me hables por 24 horas.`,
+  `Te pareces a un NPC rogando por monedas, {user}. Toma **{amount}** puntos y lárgate antes de que me arrepienta.`,
+  `**{amount}** puntos, {user}. La factura por procesar tu súplica te llegará a las 3 AM en forma de crisis existencial.`,
+  `Burunyaa~ ¿De verdad has caído tan bajo como para suplicar, {user}? Toma un ladrillo y esto de propina: **{amount}**.`,
+  `Nyaha~ ¿Sabes qué es más triste que mendigar, {user}? Nada. No hay nada más triste. Toma **{amount}**, sucio indigente.`,
+  `Oye {user}, normalmente no doy limosnas, pero tu carita de abandono me ha tocado el alma. Toma tus **{amount}** migajas.`,
+  `Te doy **{amount}** puntos, {user}, pero no porque los merezcas… sino porque estoy aburrida y necesito que hagas algo ridículo.`,
+  `¡Nya~! Me has entretenido con tu miseria, {user}. Toma **{amount}** puntitos... pero prométeme que vas a hacer algo estúpido con ellos.`,
+  `{user}, he consultado con mis asesores legales y dicen que darte **{amount}** puntos es deducible como obra de caridad. Toma, caso fiscal.`,
+  `¿Mendigando otra vez, {user}? Vale, pero que sepas que cada vez que usas \`/beg\` guardo captura. Para el archivo. Toma tus **{amount}** puntos.`,
 ];
 
 export const BEG_COOLDOWN: readonly string[] = [
-  "Ya has pedido hoy. Espera al siguiente día, vagabundo.",
-  "Solo una vez al día. Vuelve mañana.",
-  "Que ya te he dado hoy. Sé paciente.",
+  "Burunya~ un beg por día, {user}. No eres suscriptor premium del caos.",
+  "Ya has mendigado hoy, {user}. Baja el chandal, respira, y vuelve mañana.",
+  "¿Ya de vuelta, {user}? Ni Hacienda me acosa tanto, nyaha~. Vuelve mañana.",
+  "Un intento por día, {user}. Es literalmente la única regla y ya la has roto.",
+  "Que ya te vi hoy, {user}. Vete a ganar puntos honestamente. Si es que sabes.",
+  "Burunya~ paciencia, cultista {user}. Los milagros diarios son cupo limitado.",
+  "{user}, la letra pequeña del pacto dice UNA vez al día. ¿No sabes leer o qué?",
+  "Nyaha~ te acabo de dar puntos hoy y ya vuelves. Ni mi ex me acosaba así, {user}.",
+  "Ya te di hoy, {user}. ¿Memoria de pez o adicción? Vuelve al día siguiente y sufre.",
+  "¿Otra? Burunyaa~ estás más pesado que anuncio de casino, {user}. Reset diario, punto.",
+  "Nyaha~ ¿tan pronto? Ni tu dealer trabaja horas extra, {user}. Esto no es negocio 24/7.",
 ];
