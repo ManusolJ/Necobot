@@ -5,13 +5,22 @@ import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
 
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 
 export function findGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return db
     .select()
     .from(guildUsers)
     .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId)))
+    .get();
+}
+
+export function deductGuildUserPoints(guildId: string, userId: string, amount: number): GuildUser | undefined {
+  return db
+    .update(guildUsers)
+    .set({ points: sql`${guildUsers.points} - ${amount}` })
+    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId), gte(guildUsers.points, amount)))
+    .returning()
     .get();
 }
 

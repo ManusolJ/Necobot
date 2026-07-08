@@ -19,6 +19,7 @@
   "author": "Manuel Soler Juan",
   "type": "module",
   "dependencies": {
+    "@discordjs/voice": "^0.19.2",
     "@sapphire/framework": "^5.5.0",
     "@sapphire/plugin-scheduled-tasks": "^10.0.4",
     "@sapphire/shapeshift": "^4.0.0",
@@ -28,8 +29,11 @@
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "ffmpeg-static": "^5.3.0",
     "ioredis": "^5.11.1",
+    "libsodium-wrappers": "^0.8.4",
     "luxon": "^3.7.2",
+    "opusscript": "^0.0.8",
     "pino": "^10.3.1",
     "undici": "^8.4.1"
   },

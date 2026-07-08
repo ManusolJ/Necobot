@@ -7,6 +7,7 @@ import {
   upsertGuildUser,
   recordBegAttempt,
   applyGuildUserDelta,
+  deductGuildUserPoints,
 } from "@core/repositories/user.repository.js";
 
 import type { EarnAction } from "@shared/types/earn-action.type.js";
@@ -56,5 +57,23 @@ export function recordBeg(guildId: string, userId: string, pointsEarned: number)
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
   }
+  return result;
+}
+
+export function subtractPointsFromUser(guildId: string, userId: string, points: number): GuildUser | undefined {
+  return deductGuildUserPoints(guildId, userId, points);
+}
+
+export function sumPointsToUser(guildId: string, userId: string, points: number): GuildUser {
+  const result = applyGuildUserDelta({
+    guildId,
+    userId,
+    deltas: { points },
+  });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
   return result;
 }

@@ -41,3 +41,21 @@ export class GuildChannelPersistError extends AppError {
     super("guild_channel_persist_failed", { context: { guildId, purpose }, cause });
   }
 }
+
+export class UserNotInVoiceError extends AppError {
+  public constructor(userId: string) {
+    super("user_not_in_voice", { context: { userId } });
+  }
+}
+
+export class BotVoiceBusyError extends AppError {
+  public constructor(guildId: string) {
+    super("bot_voice_busy", { context: { guildId } });
+  }
+}
+
+export class BotVoicePermissionError extends AppError {
+  public constructor(channelId: string) {
+    super("bot_voice_permission_not_enough", { context: { channelId } });
+  }
+}
