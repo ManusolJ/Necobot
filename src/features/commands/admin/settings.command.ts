@@ -1,14 +1,15 @@
+import { BotPermissionNotEnough } from "@infrastructure/errors/domain.errors.js";
+
 import { completeGuildSetup } from "@core/services/guild.service.js";
 
 import { AVAILABLE_PREFIXES } from "@shared/consts/settings.constants.js";
+import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
 import { ChannelType, MessageFlags, PermissionFlagsBits } from "discord.js";
-import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
-import { BotPermissionNotEnough } from "@infrastructure/errors/domain.errors.js";
 
 export class SettingsCommand extends Command {
   public override registerApplicationCommands(registry: ApplicationCommandRegistry): Awaitable<void> {
