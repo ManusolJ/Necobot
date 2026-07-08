@@ -18,6 +18,13 @@ const FIRST_PASS_CHANCE = 0.6;
 const RETRY_PASS_CHANCE = 0.3;
 
 export class BegCommand extends Command {
+  public constructor(context: Command.LoaderContext, options: Command.Options) {
+    super(context, {
+      ...options,
+      preconditions: ["GuildConfigured"],
+    });
+  }
+
   public override registerApplicationCommands(registry: ApplicationCommandRegistry): Awaitable<void> {
     registry.registerChatInputCommand((builder) =>
       builder.setName("beg").setDescription("Pideme puntos como el vagabundo que eres."),
