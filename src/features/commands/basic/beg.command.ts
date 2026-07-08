@@ -1,10 +1,10 @@
 import { getGuildUser, recordBeg } from "@core/services/user.service.js";
 import { findGuildSettings } from "@core/repositories/guild.repository.js";
 
+import { randomInt } from "@shared/utils/random-int.util.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { isSameUTCDay } from "@shared/utils/is-same-day.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
-import { pointGenerator } from "@shared/utils/point-generator.util.js";
 import { BEG_COOLDOWN, BEG_FAIL, BEG_RETRY, BEG_SUCCESS } from "@shared/consts/beg-message.constants.js";
 
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
@@ -74,7 +74,7 @@ export class BegCommand extends Command {
     displayName: string,
     afterRetry: boolean,
   ): Promise<void> {
-    const amount = pointGenerator(MINIMUM_REWARD, MAXIMUM_REWARD);
+    const amount = randomInt(MINIMUM_REWARD, MAXIMUM_REWARD);
 
     recordBeg(guildId, userId, amount);
 
