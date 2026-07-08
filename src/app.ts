@@ -9,8 +9,14 @@ import "@sapphire/plugin-scheduled-tasks/register";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { GatewayIntentBits } from "discord.js";
-import { SapphireClient } from "@sapphire/framework";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { ApplicationCommandRegistries, RegisterBehavior, SapphireClient } from "@sapphire/framework";
+
+ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
+
+if (env.DISCORD_DEV_GUILD_ID) {
+  ApplicationCommandRegistries.setDefaultGuildIds([env.DISCORD_DEV_GUILD_ID]);
+}
 
 const currentPath = dirname(fileURLToPath(import.meta.url));
 
