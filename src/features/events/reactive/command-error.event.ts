@@ -1,11 +1,11 @@
-import { logger } from "@infrastructure/config/logger.config.js";
 import { AppError } from "@infrastructure/errors/app-error.js";
+import { logger } from "@infrastructure/config/logger.config.js";
 
 import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 
-import { Events, Listener } from "@sapphire/framework";
 import type { ChatInputCommandErrorPayload } from "@sapphire/framework";
 
+import { Events, Listener } from "@sapphire/framework";
 import { MessageFlags, type InteractionReplyOptions } from "discord.js";
 
 export class CommandErrorListener extends Listener<typeof Events.ChatInputCommandError> {

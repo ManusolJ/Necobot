@@ -20,5 +20,8 @@ export const guildChannels = sqliteTable(
   (table) => [primaryKey({ columns: [table.guildId, table.purpose] })],
 );
 
+export type GuildChannel = typeof guildChannels.$inferSelect;
+export type GuildChannelInsert = typeof guildChannels.$inferInsert;
+
 export type GuildSettings = typeof guildSettings.$inferSelect;
 export type GuildSettingsInsert = typeof guildSettings.$inferInsert;
