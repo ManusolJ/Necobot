@@ -2,10 +2,11 @@ import { GuildNotConfiguredError } from "@infrastructure/errors/domain.errors.js
 
 import { getGuildSettings } from "@core/services/guild.service.js";
 
-import { Precondition } from "@sapphire/framework";
+import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
+
 import type { ChatInputCommandInteraction } from "discord.js";
 
-import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
+import { Precondition } from "@sapphire/framework";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
