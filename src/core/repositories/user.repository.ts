@@ -1,6 +1,7 @@
+import type { GuildUser, GuildUserInsert } from "@infrastructure/database/schema/user.schema.js";
+
 import { db } from "@infrastructure/database/client.js";
 import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
-import type { GuildUser, GuildUserInsert } from "@infrastructure/database/schema/user.schema.js";
 
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 

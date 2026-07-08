@@ -1,6 +1,12 @@
+import type {
+  GuildChannel,
+  GuildSettings,
+  GuildChannelInsert,
+  GuildSettingsInsert,
+} from "@infrastructure/database/schema/guild.schema.js";
+
 import { db } from "@infrastructure/database/client.js";
-import type { GuildSettings, GuildSettingsInsert } from "@infrastructure/database/schema/guild.schema.js";
-import { guildSettings } from "@infrastructure/database/schema/guild.schema.js";
+import { guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
 
 import { eq } from "drizzle-orm";
 
@@ -15,6 +21,23 @@ export function upsertGuildSettings(settings: GuildSettingsInsert): GuildSetting
     .onConflictDoUpdate({
       target: guildSettings.guildId,
       set: settings,
+    })
+    .returning();
+
+  return updated.get();
+}
+
+export function findGuildChannels(guildId: string): GuildChannel[] {
+  return db.select().from(guildChannels).where(eq(guildChannels.guildId, guildId)).all();
+}
+
+export function upsertGuildChannel(channel: GuildChannelInsert): GuildChannel | undefined {
+  const updated = db
+    .insert(guildChannels)
+    .values(channel)
+    .onConflictDoUpdate({
+      target: [guildChannels.guildId, guildChannels.purpose],
+      set: { channelId: channel.channelId },
     })
     .returning();
 
