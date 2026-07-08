@@ -23,3 +23,21 @@ export class GuildUserPersistError extends AppError {
     super("guild_user_persist_failed", { context: { guildId, userId }, cause });
   }
 }
+
+export class BotPermissionsNotVerified extends AppError {
+  public constructor() {
+    super("bot_permission_not_verified");
+  }
+}
+
+export class BotPermissionNotEnough extends AppError {
+  public constructor(channelId: string) {
+    super("bot_permission_not_enough", { context: { channelId } });
+  }
+}
+
+export class GuildChannelPersistError extends AppError {
+  public constructor(guildId: string, purpose: string, cause?: unknown) {
+    super("guild_channel_persist_failed", { context: { guildId, purpose }, cause });
+  }
+}
