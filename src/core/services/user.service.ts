@@ -1,4 +1,5 @@
 import type { GuildUser } from "@infrastructure/database/schema/user.schema.js";
+
 import { GuildUserPersistError } from "@infrastructure/errors/domain.errors.js";
 
 import {
