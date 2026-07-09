@@ -15,6 +15,10 @@ declare module "@sapphire/framework" {
 }
 
 export class GuildConfiguredPrecondition extends Precondition {
+  public constructor(context: Precondition.LoaderContext, options: Precondition.Options) {
+    super(context, { ...options, name: "GuildConfigured" });
+  }
+
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) {
       return this.error({ message: "This bot is guild-only." });
