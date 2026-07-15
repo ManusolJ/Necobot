@@ -4,6 +4,8 @@ import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
 import { getGuildSettings } from "@core/services/guild.service.js";
 import { getGuildUser, isUserExcluded, subtractPointsFromUser, sumPointsToUser } from "@core/services/user.service.js";
 
+import type { RpsChoice } from "@shared/types/rps-choice.type.js";
+
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
 import {
@@ -28,7 +30,6 @@ import {
   DUEL_TARGET_BROKE,
   DUEL_WIN,
 } from "@shared/consts/duel-message.constants.js";
-import { RpsChoice } from "@shared/types/rps-choice.type.js";
 
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember, Message, User } from "discord.js";
