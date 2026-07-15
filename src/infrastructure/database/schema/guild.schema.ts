@@ -6,6 +6,7 @@ export const guildSettings = sqliteTable("guild_settings", {
   prefix: text("prefix").notNull().default("!"),
   setupCompletedAt: integer("setup_completed_at", { mode: "timestamp" }),
   begRetryRoleId: text("beg_retry_role_id"),
+  activeMines: integer("active_mines").notNull().default(0),
 });
 
 export const guildChannels = sqliteTable(

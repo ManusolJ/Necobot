@@ -15,6 +15,7 @@ export const guildUsers = sqliteTable(
     activatedMines: integer("activated_mines").notNull().default(0),
     historicalPoints: integer("historical_points").notNull().default(0),
     lastBeggedAt: integer("last_begged_at", { mode: "timestamp" }),
+    excludedAt: integer("excluded_at", { mode: "timestamp" }),
   },
   (table) => [primaryKey({ columns: [table.guildId, table.userId] })],
 );
