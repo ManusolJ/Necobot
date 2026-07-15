@@ -11,6 +11,8 @@ const USER_MESSAGES: Record<string, string> = {
   guild_settings_persist_failed: "Hubo un error al guardar la configuración. Intenta de nuevo.",
   bot_voice_permission_not_enough: "No tengo permisos para unirme o hablar en ese canal de voz.",
   guild_not_configured: "Un administrador debe usar el comando `/settings` antes de poder usar esta interacción.",
+  user_excluded:
+    "Estás excluido de las actividades del bot, nyaha~. Habla con un administrador si crees que es un error.",
 };
 
 const FALLBACK_MESSAGE = "Hubo un error inesperado. Si persiste, avisa a un administrador.";
