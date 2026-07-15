@@ -23,11 +23,6 @@ export function incrementGuildMines(guildId: string, count: number): GuildSettin
     .get();
 }
 
-/**
- * Atomically consumes one mine. The `active_mines > 0` guard means two
- * near-simultaneous triggers can never detonate the same mine twice.
- * Returns undefined when no mines are armed.
- */
 export function consumeGuildMine(guildId: string): GuildSettings | undefined {
   return db
     .update(guildSettings)

@@ -84,10 +84,6 @@ export function applyGuildUserDelta(input: {
   return updated.get();
 }
 
-/**
- * Marks a user as excluded from (or readmitted to) bot activities.
- * Upserts so the flag can be set before the user has ever earned anything.
- */
 export function setGuildUserExclusion(guildId: string, userId: string, excludedAt: Date | null): GuildUser | undefined {
   const updated = db
     .insert(guildUsers)
