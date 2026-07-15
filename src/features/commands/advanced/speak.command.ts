@@ -25,7 +25,7 @@ export class SpeakCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
     super(context, {
       ...options,
-      preconditions: ["GuildConfigured"],
+      preconditions: ["GuildConfigured", "NotExcluded"],
     });
   }
 
