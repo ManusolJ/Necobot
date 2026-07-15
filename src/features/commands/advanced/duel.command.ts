@@ -9,26 +9,26 @@ import type { RpsChoice } from "@shared/types/rps-choice.type.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
 import {
-  DUEL_DEFAULT_BET,
   DUEL_MAX_BET,
-  DUEL_PHASE_TIMEOUT_MS,
+  DUEL_DEFAULT_BET,
   DUEL_VS_BOT_REWARD,
+  DUEL_PHASE_TIMEOUT_MS,
 } from "@shared/consts/duel.constants.js";
 import {
-  DUEL_ALREADY_CHOSE,
+  DUEL_WIN,
+  DUEL_DRAW,
+  DUEL_DENIED,
+  DUEL_BOT_WIN,
   DUEL_BOT_DRAW,
   DUEL_BOT_LOSE,
-  DUEL_BOT_TIMEOUT,
-  DUEL_BOT_WIN,
-  DUEL_CHOICE_REGISTERED,
-  DUEL_DENIED,
-  DUEL_DRAW,
-  DUEL_INVITE_TIMEOUT,
-  DUEL_NO_CHOICE_BOTH,
-  DUEL_NO_CHOICE_ONE,
   DUEL_NOT_FOR_YOU,
+  DUEL_BOT_TIMEOUT,
   DUEL_TARGET_BROKE,
-  DUEL_WIN,
+  DUEL_ALREADY_CHOSE,
+  DUEL_NO_CHOICE_ONE,
+  DUEL_NO_CHOICE_BOTH,
+  DUEL_INVITE_TIMEOUT,
+  DUEL_CHOICE_REGISTERED,
 } from "@shared/consts/duel-message.constants.js";
 
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
@@ -118,7 +118,7 @@ export class DuelCommand extends Command {
 
     const embed = new EmbedBuilder()
       .setColor(EMBED_COLOR)
-      .setTitle("⚔️ Duelo contra la mismísima Neco")
+      .setTitle("Duelo contra la criatura")
       .setDescription(`<@${member.id}> me reta a piedra, papel o tijeras. Elige tu arma. Tienes 5 minutos.`);
 
     await interaction.reply({ embeds: [embed], components: [buildRpsRow()] });
