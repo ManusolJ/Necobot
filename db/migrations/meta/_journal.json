@@ -22,6 +22,13 @@
       "when": 1782896604996,
       "tag": "0002_add_beg_cooldown_and_retry_role",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784129597567,
+      "tag": "0003_minefield_and_exclusions",
+      "breakpoints": true
     }
   ]
 }

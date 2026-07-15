@@ -7,7 +7,13 @@ import type {
 
 import { GuildChannelPersistError, GuildSettingsPersistError } from "@infrastructure/errors/domain.errors.js";
 
-import { findGuildSettings, upsertGuildChannel, upsertGuildSettings } from "@core/repositories/guild.repository.js";
+import {
+  consumeGuildMine,
+  findGuildSettings,
+  incrementGuildMines,
+  upsertGuildChannel,
+  upsertGuildSettings,
+} from "@core/repositories/guild.repository.js";
 
 export function getGuildSettings(guildId: string): GuildSettings | undefined {
   return findGuildSettings(guildId);
@@ -37,4 +43,25 @@ export function registerGuildChannel(input: GuildChannelInsert): GuildChannel {
   }
 
   return result;
+}
+
+/**
+ * Adds `count` armed mines to the guild's main channel pool.
+ */
+export function armMines(guildId: string, count: number): GuildSettings {
+  const result = incrementGuildMines(guildId, count);
+
+  if (!result) {
+    throw new GuildSettingsPersistError(guildId);
+  }
+
+  return result;
+}
+
+/**
+ * Attempts to detonate one armed mine. Atomic — returns false when the pool
+ * is empty or another trigger got there first.
+ */
+export function tryConsumeMine(guildId: string): boolean {
+  return consumeGuildMine(guildId) !== undefined;
 }

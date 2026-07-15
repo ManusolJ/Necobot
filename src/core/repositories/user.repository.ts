@@ -41,15 +41,13 @@ export function applyGuildUserDelta(input: {
   guildId: string;
   userId: string;
   deltas: GuildUserCounterDeltas;
-  lastActiveAt?: Date;
 }): GuildUser | undefined {
-  const { guildId, userId, deltas, lastActiveAt } = input;
+  const { guildId, userId, deltas } = input;
 
   const initialValues: GuildUserInsert = {
     guildId,
     userId,
     ...deltas,
-    ...(lastActiveAt ? { lastActiveAt } : {}),
   };
 
   const setClause: Record<string, unknown> = {};
@@ -74,16 +72,29 @@ export function applyGuildUserDelta(input: {
     setClause.activatedMines = sql`${guildUsers.activatedMines} + ${deltas.activatedMines}`;
   }
 
-  if (lastActiveAt) {
-    setClause.lastActiveAt = lastActiveAt;
-  }
-
   const updated = db
     .insert(guildUsers)
     .values(initialValues)
     .onConflictDoUpdate({
       target: [guildUsers.guildId, guildUsers.userId],
       set: setClause,
+    })
+    .returning();
+
+  return updated.get();
+}
+
+/**
+ * Marks a user as excluded from (or readmitted to) bot activities.
+ * Upserts so the flag can be set before the user has ever earned anything.
+ */
+export function setGuildUserExclusion(guildId: string, userId: string, excludedAt: Date | null): GuildUser | undefined {
+  const updated = db
+    .insert(guildUsers)
+    .values({ guildId, userId, excludedAt })
+    .onConflictDoUpdate({
+      target: [guildUsers.guildId, guildUsers.userId],
+      set: { excludedAt },
     })
     .returning();
 

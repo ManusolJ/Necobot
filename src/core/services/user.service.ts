@@ -8,6 +8,7 @@ import {
   recordBegAttempt,
   applyGuildUserDelta,
   deductGuildUserPoints,
+  setGuildUserExclusion,
 } from "@core/repositories/user.repository.js";
 
 import type { EarnAction } from "@shared/types/earn-action.type.js";
@@ -42,11 +43,52 @@ export function awardPoints(input: AwardInput): GuildUser {
       historicalPoints: input.amount,
       [counterKey]: 1,
     },
-    lastActiveAt: new Date(),
   });
 
   if (!result) {
     throw new GuildUserPersistError(input.guildId, input.userId);
+  }
+
+  return result;
+}
+
+/**
+ * True when an admin has excluded this user from bot activities.
+ */
+export function isUserExcluded(guildId: string, userId: string): boolean {
+  return findGuildUser(guildId, userId)?.excludedAt != null;
+}
+
+/**
+ * Excludes a user from (or readmits them to) bot activities.
+ */
+export function setUserExclusion(guildId: string, userId: string, excluded: boolean): GuildUser {
+  const result = setGuildUserExclusion(guildId, userId, excluded ? new Date() : null);
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+/**
+ * Records a mine detonation on a user: bumps their activatedMines counter and
+ * applies a point penalty (0 for the timeout branch). The penalty can push the
+ * balance negative — stepping on a mine while broke is still punishable.
+ */
+export function recordMineHit(guildId: string, userId: string, pointPenalty: number): GuildUser {
+  const result = applyGuildUserDelta({
+    guildId,
+    userId,
+    deltas: {
+      points: -pointPenalty,
+      activatedMines: 1,
+    },
+  });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
   }
 
   return result;
