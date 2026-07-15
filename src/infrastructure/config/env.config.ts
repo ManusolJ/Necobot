@@ -1,5 +1,4 @@
 import {
-  DEV_ENV,
   DEBUG_LOG_LEVEL,
   REDIS_DEFAULT_HOST,
   REDIS_DEFAULT_PORT,
@@ -11,7 +10,6 @@ import "dotenv/config";
 import { s } from "@sapphire/shapeshift";
 
 const ENVIRONMENT_SCHEMA = s.object({
-  NODE_ENV: s.string().default(DEV_ENV),
   LOG_LEVEL: s.string().default(DEBUG_LOG_LEVEL),
 
   BOT_TOKEN: s.string().lengthGreaterThan(0),
@@ -27,7 +25,6 @@ const ENVIRONMENT_SCHEMA = s.object({
 const emptyToUndefined = (value: string | undefined): string | undefined => (value === "" ? undefined : value);
 
 export const env = ENVIRONMENT_SCHEMA.parse({
-  NODE_ENV: emptyToUndefined(process.env.NODE_ENV),
   LOG_LEVEL: emptyToUndefined(process.env.LOG_LEVEL),
 
   BOT_TOKEN: emptyToUndefined(process.env.BOT_TOKEN),

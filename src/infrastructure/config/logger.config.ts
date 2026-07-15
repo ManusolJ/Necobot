@@ -1,20 +1,7 @@
-import { DEV_ENV } from "@shared/consts/config.constants.js";
-
 import { env } from "./env.config.js";
-
-import type { LoggerOptions } from "pino";
 
 import { pino } from "pino";
 
-const loggerOptions: LoggerOptions = {
+export const logger = pino({
   level: env.LOG_LEVEL,
-};
-
-if (env.NODE_ENV === DEV_ENV) {
-  loggerOptions.transport = {
-    target: "pino-pretty",
-    options: { colorize: true },
-  };
-}
-
-export const logger = pino(loggerOptions);
+});

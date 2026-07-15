@@ -61,16 +61,10 @@ export class AddChannelCommand extends Command {
       purpose,
     });
 
-    let label = "";
-
-    for (const purpose of CHANNEL_PURPOSES) {
-      if (purpose.value === saved.purpose) {
-        label = purpose.name;
-      }
-    }
+    const label = CHANNEL_PURPOSES.find((p) => p.value === saved.purpose)?.name ?? saved.purpose;
 
     await interaction.reply({
-      content: `Canal registrado: <#${saved.channelId}> como **${label.length === 0 ? label : saved.purpose}**.`,
+      content: `Canal registrado: <#${saved.channelId}> como **${label}**.`,
       flags: MessageFlags.Ephemeral,
     });
   }
