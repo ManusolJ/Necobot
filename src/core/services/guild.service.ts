@@ -45,9 +45,6 @@ export function registerGuildChannel(input: GuildChannelInsert): GuildChannel {
   return result;
 }
 
-/**
- * Adds `count` armed mines to the guild's main channel pool.
- */
 export function armMines(guildId: string, count: number): GuildSettings {
   const result = incrementGuildMines(guildId, count);
 
@@ -58,10 +55,6 @@ export function armMines(guildId: string, count: number): GuildSettings {
   return result;
 }
 
-/**
- * Attempts to detonate one armed mine. Atomic — returns false when the pool
- * is empty or another trigger got there first.
- */
 export function tryConsumeMine(guildId: string): boolean {
   return consumeGuildMine(guildId) !== undefined;
 }
