@@ -108,3 +108,32 @@ export function sumPointsToUser(guildId: string, userId: string, points: number)
 
   return result;
 }
+
+/**
+ * Confiscates a percentage of a user's current points (rounded down).
+ * Returns what was taken and the updated row, or undefined when there is
+ * nothing to take (no row, zero/negative balance, or a concurrent spend
+ * emptied the account between read and write).
+ */
+export function confiscatePointsPercent(
+  guildId: string,
+  userId: string,
+  percent: number,
+): { taken: number; user: GuildUser } | undefined {
+  const current = findGuildUser(guildId, userId);
+  if (!current || current.points <= 0) {
+    return undefined;
+  }
+
+  const taken = Math.floor(current.points * percent);
+  if (taken <= 0) {
+    return undefined;
+  }
+
+  const updated = deductGuildUserPoints(guildId, userId, taken);
+  if (!updated) {
+    return undefined;
+  }
+
+  return { taken, user: updated };
+}
