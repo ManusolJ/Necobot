@@ -20,6 +20,8 @@ const ENVIRONMENT_SCHEMA = s.object({
 
   REDIS_PORT: s.string().regex(/^\d+$/).default(REDIS_DEFAULT_PORT),
   REDIS_HOST: s.string().default(REDIS_DEFAULT_HOST),
+
+  OLLAMA_URL: s.string().optional(),
 });
 
 const emptyToUndefined = (value: string | undefined): string | undefined => (value === "" ? undefined : value);
@@ -34,4 +36,6 @@ export const env = ENVIRONMENT_SCHEMA.parse({
 
   REDIS_HOST: emptyToUndefined(process.env.REDIS_HOST),
   REDIS_PORT: emptyToUndefined(process.env.REDIS_PORT),
+
+  OLLAMA_URL: emptyToUndefined(process.env.OLLAMA_URL),
 });
