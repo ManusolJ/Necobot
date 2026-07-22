@@ -18,7 +18,7 @@ export async function requestChatCompletion(messages: ChatMessage[]): Promise<st
     const response = await fetch(`${env.OLLAMA_URL}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: AI_MODEL_NAME, messages, stream: false }),
+      body: JSON.stringify({ model: AI_MODEL_NAME, messages, stream: false, think: false }),
       signal: AbortSignal.timeout(AI_GENERATION_TIMEOUT_MS),
     });
 
