@@ -6,7 +6,7 @@ import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework"
 import { Command } from "@sapphire/framework";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 
-const PUNISH_PERCENT = 0.7;
+const PUNISH_PERCENT = 0.5;
 
 export class PunishCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {

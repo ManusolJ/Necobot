@@ -109,12 +109,6 @@ export function sumPointsToUser(guildId: string, userId: string, points: number)
   return result;
 }
 
-/**
- * Confiscates a percentage of a user's current points (rounded down).
- * Returns what was taken and the updated row, or undefined when there is
- * nothing to take (no row, zero/negative balance, or a concurrent spend
- * emptied the account between read and write).
- */
 export function confiscatePointsPercent(
   guildId: string,
   userId: string,
