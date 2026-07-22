@@ -1,6 +1,6 @@
 export const AI_MODEL_NAME = "necoarc";
 
-export const AI_BASE_SUPPORTS_THINKING = true;
+export const AI_BASE_SUPPORTS_THINKING = false;
 
 export const AI_GENERATION_TIMEOUT_MS = 60_000;
 
