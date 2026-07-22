@@ -1,4 +1,4 @@
-FROM hf.co/BSC-LT/salamandra-2b-instruct-gguf
+FROM hdnh2006/salamandra-2b-instruct:latest
 
 PARAMETER temperature 0.9
 PARAMETER repeat_penalty 1.1
