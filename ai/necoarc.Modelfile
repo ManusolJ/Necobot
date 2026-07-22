@@ -1,4 +1,4 @@
-FROM hdnh2006/salamandra-2b-instruct:latest
+FROM hdnh2006/salamandra-7b-instruct:latest
 
 PARAMETER temperature 0.9
 PARAMETER repeat_penalty 1.1
