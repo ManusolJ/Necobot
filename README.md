@@ -169,7 +169,7 @@ this one - is the rewrite where I stopped hand-rolling the plumbing:
 
 ---
 
-## 🚀 Running it
+## Running it
 
 **Requirements:** Docker, and an Ollama instance reachable from the container.
 
