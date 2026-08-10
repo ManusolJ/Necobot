@@ -89,16 +89,9 @@ Declining ends it (with an insult). Accepting swaps the same message's component
 rock–paper–scissors, and the bot then waits for both players to choose before resolving
 and transferring the stake.
 
-```mermaid
-stateDiagram-v2
-    [*] --> Pending: challenger stakes points
-    Pending --> Cancelled: Decline
-    Pending --> Choosing: Accept
-    Choosing --> Choosing: one player has picked
-    Choosing --> Resolved: both picks in
-    Resolved --> [*]: stake transferred
-    Cancelled --> [*]
-```
+<div align="center">
+  <img src="docs/assets/schema.svg" alt="Schema" width="460">
+</div>
 
 This means holding interaction state across multiple messages and users, mutating a live
 message's components in place, authorising each button press against the right player,

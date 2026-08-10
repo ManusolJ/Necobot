@@ -40,5 +40,5 @@ coverage/
 .DS_Store
 .env
 
-/docs
+/docs/archives
 /db/data
