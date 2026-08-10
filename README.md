@@ -188,7 +188,7 @@ docker compose up --build
 
 ---
 
-## 🧭 Status and roadmap
+## Status and roadmap
 
 Live and in continuous use on one private server. Not built to be a public, multi-guild
 bot.
@@ -202,7 +202,7 @@ bot.
 
 <div align="center">
 
-### 👤 Author
+### Author
 
 **Manuel Soler Juan** - Junior full stack developer
 
