@@ -169,7 +169,7 @@ this one - is the rewrite where I stopped hand-rolling the plumbing:
 
 ---
 
-## 🚀 Running it
+## Running it
 
 **Requirements:** Docker, and an Ollama instance reachable from the container.
 
@@ -188,7 +188,7 @@ docker compose up --build
 
 ---
 
-## 🧭 Status and roadmap
+## Status and roadmap
 
 Live and in continuous use on one private server. Not built to be a public, multi-guild
 bot.
@@ -202,7 +202,7 @@ bot.
 
 <div align="center">
 
-### 👤 Author
+### Author
 
 **Manuel Soler Juan** - Junior full stack developer
 
