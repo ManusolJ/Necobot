@@ -1,5 +1,7 @@
 import { setUserExclusion } from "@core/services/user.service.js";
 
+import { requireGuildId } from "@shared/utils/guild-context.util.js";
+
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
@@ -36,7 +38,7 @@ export class ExcludeCommand extends Command {
     const target = interaction.options.getUser("user", true);
     const readmit = interaction.options.getBoolean("readmit", false) ?? false;
 
-    setUserExclusion(interaction.guildId!, target.id, !readmit);
+    setUserExclusion(requireGuildId(interaction), target.id, !readmit);
 
     await interaction.reply({
       content: readmit
