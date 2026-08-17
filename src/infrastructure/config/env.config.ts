@@ -1,4 +1,5 @@
 import {
+  LOG_LEVELS,
   DEBUG_LOG_LEVEL,
   REDIS_DEFAULT_HOST,
   REDIS_DEFAULT_PORT,
@@ -10,32 +11,52 @@ import "dotenv/config";
 import { s } from "@sapphire/shapeshift";
 
 const ENVIRONMENT_SCHEMA = s.object({
-  LOG_LEVEL: s.string().default(DEBUG_LOG_LEVEL),
+  LOG_LEVEL: s.enum(LOG_LEVELS).default(DEBUG_LOG_LEVEL),
 
   BOT_TOKEN: s.string().lengthGreaterThan(0),
 
   DISCORD_DEV_GUILD_ID: s.string().optional(),
 
-  DATABASE_PATH: s.string().default(DATABASE_DEFAULT_PATH),
+  DATABASE_PATH: s.string().lengthGreaterThan(0).default(DATABASE_DEFAULT_PATH),
 
-  REDIS_PORT: s.string().regex(/^\d+$/).default(REDIS_DEFAULT_PORT),
-  REDIS_HOST: s.string().default(REDIS_DEFAULT_HOST),
+  REDIS_PORT: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(65535).default(REDIS_DEFAULT_PORT),
+  REDIS_HOST: s.string().lengthGreaterThan(0).default(REDIS_DEFAULT_HOST),
 
-  OLLAMA_URL: s.string().optional(),
+  OLLAMA_URL: s.string().url().optional(),
 });
 
-const emptyToUndefined = (value: string | undefined): string | undefined => (value === "" ? undefined : value);
+const read = (name: string): string | undefined => {
+  const value = process.env[name];
+  return value === undefined || value === "" ? undefined : value;
+};
 
-export const env = ENVIRONMENT_SCHEMA.parse({
-  LOG_LEVEL: emptyToUndefined(process.env.LOG_LEVEL),
+const readPort = (name: string): number | undefined => {
+  const value = read(name);
+  return value === undefined ? undefined : Number(value);
+};
 
-  BOT_TOKEN: emptyToUndefined(process.env.BOT_TOKEN),
-  DISCORD_DEV_GUILD_ID: emptyToUndefined(process.env.DISCORD_DEV_GUILD_ID),
+const readUrl = (name: string): string | undefined => read(name)?.replace(/\/+$/u, "");
 
-  DATABASE_PATH: emptyToUndefined(process.env.DATABASE_PATH),
+function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
+  try {
+    return ENVIRONMENT_SCHEMA.parse({
+      LOG_LEVEL: read("LOG_LEVEL"),
 
-  REDIS_HOST: emptyToUndefined(process.env.REDIS_HOST),
-  REDIS_PORT: emptyToUndefined(process.env.REDIS_PORT),
+      BOT_TOKEN: read("BOT_TOKEN"),
+      DISCORD_DEV_GUILD_ID: read("DISCORD_DEV_GUILD_ID"),
 
-  OLLAMA_URL: emptyToUndefined(process.env.OLLAMA_URL),
-});
+      DATABASE_PATH: read("DATABASE_PATH"),
+
+      REDIS_HOST: read("REDIS_HOST"),
+      REDIS_PORT: readPort("REDIS_PORT"),
+
+      OLLAMA_URL: readUrl("OLLAMA_URL"),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`Invalid environment configuration:\n${detail}\n`);
+    process.exit(1);
+  }
+}
+
+export const env = loadEnvironment();
