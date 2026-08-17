@@ -6,7 +6,7 @@
 
 **A Discord bot with a points economy, minigames, and a local LLM that answers in character.**
 
-It runs continuously on a private server and its my testbed for whatever I want to learn next.
+It runs continuously on a private server and it's my testbed for whatever I want to learn next.
 
 <br>
 
@@ -18,20 +18,20 @@ It runs continuously on a private server and its my testbed for whatever I want 
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![GitHub Actions](https://img.shields.io/badge/CI-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
-[![CI](https://github.com/ManusolJ/Necobot/actions/workflows/deploy.yml/badge.svg)](https://github.com/ManusolJ/Necobot/actions/workflows/ci.yml)
+[![CI](https://github.com/ManusolJ/Necobot/actions/workflows/deploy.yml/badge.svg)](https://github.com/ManusolJ/Necobot/actions/workflows/deploy.yml)
 [![Last commit](https://img.shields.io/github/last-commit/ManusolJ/Necobot?style=for-the-badge)](https://github.com/ManusolJ/Necobot/commits)
 
-<a href="#-what-it-does">What it does</a> ·
-<a href="#-technical-notes">Technical notes</a> ·
-<a href="#-tech-stack">Tech stack</a> ·
-<a href="#-running-it">Running it</a> ·
-<a href="#-status-and-roadmap">Roadmap</a>
+<a href="#what-it-does">What it does</a> ·
+<a href="#technical-notes">Technical notes</a> ·
+<a href="#tech-stack">Tech stack</a> ·
+<a href="#running-it">Running it</a> ·
+<a href="#status-and-roadmap">Roadmap</a>
 
 </div>
 
 ---
 
-Two things at once: its a working bot with points economy, minigames, an LLM-backed
+Two things at once: it's a working bot with points economy, minigames, an LLM-backed
 conversational layer and a testbed for technologies I want to try. When I want to
 learn something new, I usually implement it here first.
 
@@ -49,7 +49,7 @@ next to each other as unrelated toys.
 | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `beg`     | Grants a random amount of points, with a chance to fail outright. Users holding a specific role get one automatic second attempt. Always answers in character. |
 | `balance` | Current point total.                                                                                                                                           |
-| `profile` | Full user card: points plus tracked stats - trivia won, mines stepped on, and so on.                                                                           |
+| `profile` | Full user card: points plus tracked stats - times begged, mines stepped on, and so on.                                                                         |
 | `gift`    | Transfer points to another user.                                                                                                                               |
 
 ### Spending
@@ -57,7 +57,7 @@ next to each other as unrelated toys.
 | Command     | Cost      | Behaviour                                                                                                                                                                                        |
 | :---------- | :-------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `minefield` | 20 / mine | Plants mines in a text channel. Every message sent there afterwards has a 2% chance of detonating one: a 30-second timeout for regular users, or −50 points for admins, who cannot be timed out. |
-| `speak`     | 40        | Joins the caller's voice channel and plays a sound.                                                                                                                                              |
+| `speak`     | 45        | Joins the caller's voice channel and plays a sound.                                                                                                                                              |
 | `duel`      | wagered   | Challenge another user, winner takes the stake. [Detailed below.](#the-duel-is-a-multi-step-stateful-interaction)                                                                                |
 
 ### Utilities
@@ -110,8 +110,8 @@ Mentioning the bot with `@` routes the message to a locally hosted model through
 
 Running the model locally rather than against a hosted API also means no API key, no
 per-token cost, and no message content leaving the machine. The current model is
-`salamandra-7b-instruct`, chosen because it had the best Spanish of the ones I tried -
-subject to change.
+`salamandra-2b-instruct`, chosen because it had the best Spanish of the ones that fit
+the server's resource budget - subject to change.
 
 ### Event handling
 
@@ -119,8 +119,9 @@ Two kinds:
 
 - **Reactive** - mention handling, minefield detonation on every message in a mined
   channel, and diagnostics for denied commands and runtime errors.
-- **Scheduled** - currently only the infrastructure exists. See the
-  [roadmap](#-status-and-roadmap).
+- **Scheduled** - backed by BullMQ, currently used by `reminder` to fire a message at an
+  arbitrary future time. More scheduled features are on the
+  [roadmap](#status-and-roadmap).
 
 ### Persistence
 
@@ -146,7 +147,7 @@ this one - is the rewrite where I stopped hand-rolling the plumbing:
   instead of my own dispatcher.
 - **A layered structure** separating commands, event listeners, database access and the
   AI client.
-- **CI on GitHub Actions**, so a broken build never reaches the server.
+- **CI on GitHub Actions**, gating deployment on typecheck, lint, formatting and tests.
 - **Containerised deployment** with a versioned deploy script.
 
 > The lesson that stuck: the first version taught me what the bot needed to do, and
@@ -178,9 +179,22 @@ git clone https://github.com/ManusolJ/Necobot.git
 cd Necobot
 
 cp .env.example .env
-# Discord bot token, application ID, database path and Ollama endpoint
+# Discord bot token, dev guild ID, database path, Redis host/port and Ollama endpoint
+
+mkdir -p db/data
 
 docker compose up --build
+```
+
+The `mkdir` matters: the container runs as an unprivileged user and the SQLite file lives
+on a bind mount, so the directory has to exist first. Migrations then run automatically on
+startup.
+
+For in-character mention replies, the persona model also has to be built on the Ollama
+host - the bot requests it by name and the feature stays silent if it is missing:
+
+```bash
+ollama create necoarc -f ai/necoarc.Modelfile
 ```
 
 > [!IMPORTANT]
@@ -193,9 +207,9 @@ docker compose up --build
 Live and in continuous use on one private server. Not built to be a public, multi-guild
 bot.
 
-- [ ] **Scheduled features** on top of the existing task infrastructure: a daily
-      greeting, a weekly lottery.
-- [ ] **Automated tests** - CI currently builds and lints but does not test.
+- [ ] **Scheduled features** on top of the existing task infrastructure: a daily greeting,
+      a daily copypasta, a weekly economy leaderboard and a weekly lottery.
+- [ ] **An admin `inspect` command** for reading a user's raw economy record.
 - [ ] **More minigames** feeding the same economy.
 
 ---
