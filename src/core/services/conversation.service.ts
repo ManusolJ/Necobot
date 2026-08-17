@@ -1,13 +1,9 @@
 import { requestChatCompletion } from "@infrastructure/ai/ollama.client.js";
 
-import type { ChatMessage } from "@shared/interfaces/chat-message.interface.js";
+import type { ChatMessage } from "@shared/types/chat-message.type.js";
+import type { ChannelConversation } from "@shared/types/channel-conversation.type.js";
 
 import { AI_HISTORY_TTL_MS, AI_HISTORY_MAX_MESSAGES } from "@shared/consts/ai.constants.js";
-
-interface ChannelConversation {
-  messages: ChatMessage[];
-  lastActivityAt: number;
-}
 
 const conversations = new Map<string, ChannelConversation>();
 

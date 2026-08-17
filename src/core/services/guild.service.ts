@@ -20,13 +20,21 @@ export function getGuildSettings(guildId: string): GuildSettings | undefined {
 }
 
 export function completeGuildSetup(input: GuildSettingsInsert): GuildSettings {
-  const settings: GuildSettingsInsert = {
-    ...input,
-    prefix: input.prefix ?? "!",
-    setupCompletedAt: new Date(),
-  };
+  const updates: Partial<GuildSettingsInsert> = {};
 
-  const result = upsertGuildSettings(settings);
+  if (input.mainChannelId !== undefined) {
+    updates.mainChannelId = input.mainChannelId;
+  }
+
+  if (input.prefix !== undefined) {
+    updates.prefix = input.prefix;
+  }
+
+  if (input.begRetryRoleId !== undefined) {
+    updates.begRetryRoleId = input.begRetryRoleId;
+  }
+
+  const result = upsertGuildSettings({ ...input, setupCompletedAt: new Date() }, updates);
 
   if (!result) {
     throw new GuildSettingsPersistError(input.guildId);
@@ -57,4 +65,8 @@ export function armMines(guildId: string, count: number): GuildSettings {
 
 export function tryConsumeMine(guildId: string): boolean {
   return consumeGuildMine(guildId) !== undefined;
+}
+
+export function restoreMine(guildId: string): void {
+  incrementGuildMines(guildId, 1);
 }
