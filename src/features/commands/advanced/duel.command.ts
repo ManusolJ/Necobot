@@ -1,13 +1,15 @@
 import { logger } from "@infrastructure/config/logger.config.js";
-import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
 
 import { getGuildSettings } from "@core/services/guild.service.js";
-import { getGuildUser, isUserExcluded, subtractPointsFromUser, sumPointsToUser } from "@core/services/user.service.js";
+import { getGuildUser, isUserExcluded, sumPointsToUser } from "@core/services/user.service.js";
+import { RPS_CHOICES, payWinner, refundStake, reserveStake, resolveRps } from "@core/services/duel.service.js";
 
 import type { RpsChoice } from "@shared/types/rps-choice.type.js";
 
 import { pickRandom } from "@shared/utils/pick-random.util.js";
+import { EMBED_COLOR } from "@shared/consts/branding.constants.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
+import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 import {
   DUEL_MAX_BET,
   DUEL_DEFAULT_BET,
@@ -21,6 +23,8 @@ import {
   DUEL_BOT_WIN,
   DUEL_BOT_DRAW,
   DUEL_BOT_LOSE,
+  CHOICE_BUTTON,
+  choiceLabel,
   DUEL_NOT_FOR_YOU,
   DUEL_BOT_TIMEOUT,
   DUEL_TARGET_BROKE,
@@ -37,32 +41,32 @@ import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember, Messa
 import { Command } from "@sapphire/framework";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, MessageFlags } from "discord.js";
 
-const EMBED_COLOR = 0xeb459e;
+const CHOICE_ID_PREFIX = "duel-";
+const ACCEPT_ID = "duel-accept";
+const DENY_ID = "duel-deny";
 
-const BEATS: Record<RpsChoice, RpsChoice> = {
-  rock: "scissors",
-  paper: "rock",
-  scissors: "paper",
-};
+const HANDLED = "handled";
 
-const CHOICE_LABEL: Record<RpsChoice, string> = {
-  rock: "🪨 Piedra",
-  paper: "📄 Papel",
-  scissors: "✂️ Tijeras",
-};
-
-const RPS_CHOICES: readonly RpsChoice[] = ["rock", "paper", "scissors"];
+const TIMEOUT_MINUTES = Math.round(DUEL_PHASE_TIMEOUT_MS / 60_000);
 
 function buildRpsRow(): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder().setCustomId("duel-rock").setLabel("Piedra").setEmoji("🪨").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("duel-paper").setLabel("Papel").setEmoji("📄").setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId("duel-scissors").setLabel("Tijeras").setEmoji("✂️").setStyle(ButtonStyle.Secondary),
+    RPS_CHOICES.map((choice) =>
+      new ButtonBuilder()
+        .setCustomId(`${CHOICE_ID_PREFIX}${choice}`)
+        .setLabel(CHOICE_BUTTON[choice].label)
+        .setEmoji(CHOICE_BUTTON[choice].emoji)
+        .setStyle(ButtonStyle.Secondary),
+    ),
   );
 }
 
 function customIdToChoice(customId: string): RpsChoice | undefined {
-  return RPS_CHOICES.find((choice) => customId === `duel-${choice}`);
+  return RPS_CHOICES.find((choice) => customId === `${CHOICE_ID_PREFIX}${choice}`);
+}
+
+function conclude(embed: EmbedBuilder, description: string): { embeds: EmbedBuilder[]; components: [] } {
+  return { embeds: [EmbedBuilder.from(embed).setDescription(description)], components: [] };
 }
 
 export class DuelCommand extends Command {
@@ -96,30 +100,47 @@ export class DuelCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const guildId = interaction.guildId!;
-    const member = interaction.member as GuildMember | null;
+    const { guildId, member } = requireGuildMember(interaction);
     const opponent = interaction.options.getUser("opponent", false);
     const bet = interaction.options.getInteger("bet", false) ?? DUEL_DEFAULT_BET;
 
-    if (!member) {
-      throw new GuildMemberNotFound(guildId);
-    }
-
     if (!opponent || opponent.id === this.container.client.user?.id) {
-      await this.runVersusBot(interaction, member);
+      await this.runVersusBot(interaction, guildId, member);
       return;
     }
 
-    await this.runVersusUser(interaction, member, opponent, bet);
+    await this.runVersusUser(interaction, guildId, member, opponent, bet);
   }
 
-  private async runVersusBot(interaction: ChatInputCommandInteraction, member: GuildMember): Promise<void> {
-    const guildId = interaction.guildId!;
+  private expireWith(
+    edit: (payload: { embeds: EmbedBuilder[]; components: [] }) => Promise<unknown>,
+    embed: EmbedBuilder,
+    reason: string,
+    describe: () => string,
+    onExpire?: () => void,
+  ): void {
+    if (reason === HANDLED) {
+      return;
+    }
 
+    onExpire?.();
+
+    void edit(conclude(embed, describe())).catch((error: unknown) =>
+      logger.warn({ err: error }, "Failed to edit expired duel message"),
+    );
+  }
+
+  private async runVersusBot(
+    interaction: ChatInputCommandInteraction,
+    guildId: string,
+    member: GuildMember,
+  ): Promise<void> {
     const embed = new EmbedBuilder()
       .setColor(EMBED_COLOR)
       .setTitle("Duelo contra la criatura")
-      .setDescription(`<@${member.id}> me reta a piedra, papel o tijeras. Elige tu arma. Tienes 5 minutos.`);
+      .setDescription(
+        `<@${member.id}> me reta a piedra, papel o tijeras. Elige tu arma. Tienes ${TIMEOUT_MINUTES} minutos.`,
+      );
 
     await interaction.reply({ embeds: [embed], components: [buildRpsRow()] });
     const message = await interaction.fetchReply();
@@ -130,112 +151,71 @@ export class DuelCommand extends Command {
     });
 
     collector.on("collect", (button: ButtonInteraction) => {
-      void (async () => {
-        try {
-          if (button.user.id !== member.id) {
-            await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
-            return;
-          }
-
-          const userChoice = customIdToChoice(button.customId);
-          if (!userChoice) {
-            return;
-          }
-
-          const botChoice = pickRandom(RPS_CHOICES);
-          const replacements = {
-            user: `<@${member.id}>`,
-            userChoice: CHOICE_LABEL[userChoice],
-            botChoice: CHOICE_LABEL[botChoice],
-            reward: DUEL_VS_BOT_REWARD,
-          };
-
-          let resultText: string;
-          if (userChoice === botChoice) {
-            resultText = formatMessage(pickRandom(DUEL_BOT_DRAW), replacements);
-          } else if (BEATS[userChoice] === botChoice) {
-            sumPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
-            resultText = formatMessage(pickRandom(DUEL_BOT_WIN), replacements);
-          } else {
-            resultText = formatMessage(pickRandom(DUEL_BOT_LOSE), replacements);
-          }
-
-          await button.update({
-            embeds: [EmbedBuilder.from(embed).setDescription(resultText)],
-            components: [],
-          });
-          collector.stop("handled");
-        } catch (error) {
-          logger.error({ err: error, guildId }, "Duel vs bot failed");
+      void this.guardHandler(guildId, "Duel vs bot failed", async () => {
+        if (button.user.id !== member.id) {
+          await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
+          return;
         }
-      })();
+
+        const userChoice = customIdToChoice(button.customId);
+        if (!userChoice) {
+          return;
+        }
+
+        const botChoice = pickRandom(RPS_CHOICES);
+        const replacements = {
+          user: `<@${member.id}>`,
+          userChoice: choiceLabel(userChoice),
+          botChoice: choiceLabel(botChoice),
+          reward: DUEL_VS_BOT_REWARD,
+        };
+
+        const outcome = resolveRps(userChoice, botChoice);
+        if (outcome === "challenger") {
+          sumPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
+        }
+
+        const pool = { draw: DUEL_BOT_DRAW, challenger: DUEL_BOT_WIN, target: DUEL_BOT_LOSE }[outcome];
+
+        await button.update(conclude(embed, formatMessage(pickRandom(pool), replacements)));
+        collector.stop(HANDLED);
+      });
     });
 
     collector.on("end", (_collected, reason) => {
-      if (reason === "handled") {
-        return;
-      }
-      void interaction
-        .editReply({
-          embeds: [
-            EmbedBuilder.from(embed).setDescription(
-              formatMessage(pickRandom(DUEL_BOT_TIMEOUT), { user: `<@${member.id}>` }),
-            ),
-          ],
-          components: [],
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Failed to edit expired bot duel"));
+      this.expireWith(
+        (payload) => interaction.editReply(payload),
+        embed,
+        reason,
+        () => formatMessage(pickRandom(DUEL_BOT_TIMEOUT), { user: `<@${member.id}>` }),
+      );
     });
   }
 
   private async runVersusUser(
     interaction: ChatInputCommandInteraction,
+    guildId: string,
     challenger: GuildMember,
     target: User,
     bet: number,
   ): Promise<void> {
-    const guildId = interaction.guildId!;
-
-    if (target.bot) {
-      await interaction.reply({
-        content: "Para retar a un bot, déjame el campo vacío y pelea conmigo, nyaha~.",
-        flags: MessageFlags.Ephemeral,
-      });
+    const rejection = this.rejectUnduellableTarget(guildId, challenger, target);
+    if (rejection) {
+      await interaction.reply({ content: rejection, flags: MessageFlags.Ephemeral });
       return;
     }
 
-    if (target.id === challenger.id) {
-      await interaction.reply({
-        content: "¿Un duelo contra ti mismo? Busca ayuda. O un rival.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-
-    if (isUserExcluded(guildId, target.id)) {
-      await interaction.reply({
-        content: `<@${target.id}> está excluido de las actividades del bot. No se puede duelar con fantasmas.`,
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    const mentions = { challenger: `<@${challenger.id}>`, target: `<@${target.id}>` };
 
     const targetPoints = getGuildUser(guildId, target.id)?.points ?? 0;
     if (targetPoints < bet) {
-      await interaction.reply(
-        formatMessage(pickRandom(DUEL_TARGET_BROKE), {
-          target: `<@${target.id}>`,
-          challenger: `<@${challenger.id}>`,
-          bet,
-        }),
-      );
+      await interaction.reply(formatMessage(pickRandom(DUEL_TARGET_BROKE), { ...mentions, bet }));
       return;
     }
 
-    const charged = subtractPointsFromUser(guildId, challenger.id, bet);
-    if (!charged) {
+    if (!reserveStake(guildId, challenger.id, bet)) {
       await interaction.reply(
-        `Nyaha~ ¿retando a duelos de **${bet}** puntos sin tenerlos, <@${challenger.id}>? La confianza de los arruinados es admirable. Cancelado.`,
+        `Nyaha~ ¿retando a duelos de **${bet}** puntos sin tenerlos, ${mentions.challenger}? La confianza de los arruinados es admirable. Cancelado.`,
       );
       return;
     }
@@ -246,7 +226,7 @@ export class DuelCommand extends Command {
       : null;
 
     if (!mainChannel?.isSendable()) {
-      sumPointsToUser(guildId, challenger.id, bet);
+      refundStake(guildId, challenger.id, bet);
       await interaction.reply({
         content: "No pude acceder al canal principal para enviar la invitación. Puntos devueltos.",
         flags: MessageFlags.Ephemeral,
@@ -256,19 +236,19 @@ export class DuelCommand extends Command {
 
     const inviteEmbed = new EmbedBuilder()
       .setColor(EMBED_COLOR)
-      .setTitle("⚔️ ¡Invitación a duelo!")
+      .setTitle("¡Invitación a duelo!")
       .setDescription(
-        `<@${challenger.id}> reta a <@${target.id}> a piedra, papel o tijeras por **${bet}** puntos.\n\n` +
-          `<@${target.id}>, ¿aceptas? Tienes 5 minutos antes de que esto se convierta en una humillación pública.`,
+        `${mentions.challenger} reta a ${mentions.target} a piedra, papel o tijeras por **${bet}** puntos.\n\n` +
+          `${mentions.target}, ¿aceptas? Tienes ${TIMEOUT_MINUTES} minutos antes de que esto se convierta en una humillación pública.`,
       );
 
     const inviteRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId("duel-accept").setLabel("Aceptar").setEmoji("⚔️").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId("duel-deny").setLabel("Rechazar").setEmoji("🏳️").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId(ACCEPT_ID).setLabel("Aceptar").setEmoji("⚔️").setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(DENY_ID).setLabel("Rechazar").setEmoji("🏳️").setStyle(ButtonStyle.Danger),
     );
 
     const message = await mainChannel.send({
-      content: `<@${target.id}>`,
+      content: mentions.target,
       embeds: [inviteEmbed],
       components: [inviteRow],
     });
@@ -284,87 +264,52 @@ export class DuelCommand extends Command {
     });
 
     inviteCollector.on("collect", (button: ButtonInteraction) => {
-      void (async () => {
-        try {
-          if (button.user.id !== target.id) {
-            await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
-            return;
-          }
-
-          if (button.customId === "duel-deny") {
-            sumPointsToUser(guildId, challenger.id, bet);
-            await button.update({
-              embeds: [
-                EmbedBuilder.from(inviteEmbed).setDescription(
-                  formatMessage(pickRandom(DUEL_DENIED), {
-                    challenger: `<@${challenger.id}>`,
-                    target: `<@${target.id}>`,
-                  }),
-                ),
-              ],
-              components: [],
-            });
-            inviteCollector.stop("handled");
-            return;
-          }
-
-          if (button.customId !== "duel-accept") {
-            return;
-          }
-
-          // Target may have spent points since the pre-check — reserve atomically.
-          const targetCharged = subtractPointsFromUser(guildId, target.id, bet);
-          if (!targetCharged) {
-            sumPointsToUser(guildId, challenger.id, bet);
-            await button.update({
-              embeds: [
-                EmbedBuilder.from(inviteEmbed).setDescription(
-                  formatMessage(pickRandom(DUEL_TARGET_BROKE), {
-                    target: `<@${target.id}>`,
-                    challenger: `<@${challenger.id}>`,
-                    bet,
-                  }),
-                ),
-              ],
-              components: [],
-            });
-            inviteCollector.stop("handled");
-            return;
-          }
-
-          const rpsEmbed = EmbedBuilder.from(inviteEmbed).setDescription(
-            `⚔️ ¡Duelo aceptado! <@${challenger.id}> vs <@${target.id}> por **${bet}** puntos.\n\n` +
-              `Elegid vuestra arma. Tenéis 5 minutos. El que no elija, pierde su apuesta.`,
-          );
-
-          await button.update({ embeds: [rpsEmbed], components: [buildRpsRow()] });
-          inviteCollector.stop("handled");
-
-          this.runRpsPhase(message, rpsEmbed, guildId, challenger.id, target.id, bet);
-        } catch (error) {
-          logger.error({ err: error, guildId }, "Duel invite handling failed");
+      void this.guardHandler(guildId, "Duel invite handling failed", async () => {
+        if (button.user.id !== target.id) {
+          await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
+          return;
         }
-      })();
+
+        if (button.customId === DENY_ID) {
+          refundStake(guildId, challenger.id, bet);
+          await button.update(conclude(inviteEmbed, formatMessage(pickRandom(DUEL_DENIED), mentions)));
+          inviteCollector.stop(HANDLED);
+          return;
+        }
+
+        if (button.customId !== ACCEPT_ID) {
+          return;
+        }
+
+        if (!reserveStake(guildId, target.id, bet)) {
+          refundStake(guildId, challenger.id, bet);
+          await button.update(
+            conclude(inviteEmbed, formatMessage(pickRandom(DUEL_TARGET_BROKE), { ...mentions, bet })),
+          );
+          inviteCollector.stop(HANDLED);
+          return;
+        }
+
+        const rpsEmbed = EmbedBuilder.from(inviteEmbed).setDescription(
+          `¡Duelo aceptado! ${mentions.challenger} vs ${mentions.target} por **${bet}** puntos.\n\n` +
+            `Elegid vuestra arma. Tenéis ${TIMEOUT_MINUTES} minutos. El que no elija, pierde su apuesta.`,
+        );
+
+        await button.update({ embeds: [rpsEmbed], components: [buildRpsRow()] });
+        inviteCollector.stop(HANDLED);
+
+        this.runRpsPhase(message, rpsEmbed, guildId, challenger.id, target.id, bet);
+      });
     });
 
     inviteCollector.on("end", (_collected, reason) => {
-      if (reason === "handled") {
-        return;
-      }
-      sumPointsToUser(guildId, challenger.id, bet);
-      void message
-        .edit({
-          embeds: [
-            EmbedBuilder.from(inviteEmbed).setDescription(
-              formatMessage(pickRandom(DUEL_INVITE_TIMEOUT), {
-                challenger: `<@${challenger.id}>`,
-                target: `<@${target.id}>`,
-              }),
-            ),
-          ],
-          components: [],
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Failed to edit expired duel invite"));
+      this.expireWith(
+        (payload) => message.edit(payload),
+        inviteEmbed,
+        reason,
+        () => formatMessage(pickRandom(DUEL_INVITE_TIMEOUT), { ...mentions, minutes: TIMEOUT_MINUTES }),
+        () => refundStake(guildId, challenger.id, bet),
+      );
     });
   }
 
@@ -385,96 +330,125 @@ export class DuelCommand extends Command {
     });
 
     collector.on("collect", (button: ButtonInteraction) => {
-      void (async () => {
-        try {
-          if (!duelists.includes(button.user.id)) {
-            await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
-            return;
-          }
-
-          if (choices.has(button.user.id)) {
-            await button.reply({ content: DUEL_ALREADY_CHOSE, flags: MessageFlags.Ephemeral });
-            return;
-          }
-
-          const choice = customIdToChoice(button.customId);
-          if (!choice) {
-            return;
-          }
-
-          choices.set(button.user.id, choice);
-
-          if (choices.size < duelists.length) {
-            await button.reply({ content: DUEL_CHOICE_REGISTERED, flags: MessageFlags.Ephemeral });
-            return;
-          }
-
-          const challengerChoice = choices.get(challengerId)!;
-          const targetChoice = choices.get(targetId)!;
-
-          let resultText: string;
-          if (challengerChoice === targetChoice) {
-            sumPointsToUser(guildId, challengerId, bet);
-            sumPointsToUser(guildId, targetId, bet);
-            resultText = formatMessage(pickRandom(DUEL_DRAW), {
-              a: `<@${challengerId}>`,
-              b: `<@${targetId}>`,
-            });
-          } else {
-            const challengerWins = BEATS[challengerChoice] === targetChoice;
-            const winnerId = challengerWins ? challengerId : targetId;
-            const loserId = challengerWins ? targetId : challengerId;
-            const winnerChoice = challengerWins ? challengerChoice : targetChoice;
-            const loserChoice = challengerWins ? targetChoice : challengerChoice;
-
-            sumPointsToUser(guildId, winnerId, bet * 2);
-            resultText = formatMessage(pickRandom(DUEL_WIN), {
-              winner: `<@${winnerId}>`,
-              loser: `<@${loserId}>`,
-              amount: bet,
-              winnerChoice: CHOICE_LABEL[winnerChoice],
-              loserChoice: CHOICE_LABEL[loserChoice],
-            });
-          }
-
-          await button.update({
-            embeds: [EmbedBuilder.from(baseEmbed).setDescription(resultText)],
-            components: [],
-          });
-          collector.stop("handled");
-        } catch (error) {
-          logger.error({ err: error, guildId }, "Duel RPS handling failed");
+      void this.guardHandler(guildId, "Duel RPS handling failed", async () => {
+        if (!duelists.includes(button.user.id)) {
+          await button.reply({ content: DUEL_NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
+          return;
         }
-      })();
+
+        if (choices.has(button.user.id)) {
+          await button.reply({ content: DUEL_ALREADY_CHOSE, flags: MessageFlags.Ephemeral });
+          return;
+        }
+
+        const choice = customIdToChoice(button.customId);
+        if (!choice) {
+          return;
+        }
+
+        choices.set(button.user.id, choice);
+
+        const challengerChoice = choices.get(challengerId);
+        const targetChoice = choices.get(targetId);
+
+        if (challengerChoice === undefined || targetChoice === undefined) {
+          await button.reply({ content: DUEL_CHOICE_REGISTERED, flags: MessageFlags.Ephemeral });
+          return;
+        }
+
+        await button.update(
+          conclude(baseEmbed, this.settleDuel(guildId, challengerId, targetId, challengerChoice, targetChoice, bet)),
+        );
+        collector.stop(HANDLED);
+      });
     });
 
     collector.on("end", (_collected, reason) => {
-      if (reason === "handled") {
-        return;
-      }
-
-      const slackers = duelists.filter((id) => !choices.has(id));
-      const choosers = duelists.filter((id) => choices.has(id));
-
-      for (const chooserId of choosers) {
-        sumPointsToUser(guildId, chooserId, bet);
-      }
-
-      const resultText =
-        slackers.length === duelists.length
-          ? pickRandom(DUEL_NO_CHOICE_BOTH)
-          : formatMessage(pickRandom(DUEL_NO_CHOICE_ONE), {
-              slacker: `<@${slackers[0]}>`,
-              chooser: `<@${choosers[0]}>`,
-              bet,
-            });
-
-      void message
-        .edit({
-          embeds: [EmbedBuilder.from(baseEmbed).setDescription(resultText)],
-          components: [],
-        })
-        .catch((error: unknown) => logger.warn({ err: error }, "Failed to edit expired duel"));
+      this.expireWith(
+        (payload) => message.edit(payload),
+        baseEmbed,
+        reason,
+        () => this.settleAbandonedDuel(guildId, duelists, choices, bet),
+      );
     });
+  }
+
+  private settleDuel(
+    guildId: string,
+    challengerId: string,
+    targetId: string,
+    challengerChoice: RpsChoice,
+    targetChoice: RpsChoice,
+    bet: number,
+  ): string {
+    const outcome = resolveRps(challengerChoice, targetChoice);
+
+    if (outcome === "draw") {
+      refundStake(guildId, challengerId, bet);
+      refundStake(guildId, targetId, bet);
+      return formatMessage(pickRandom(DUEL_DRAW), { a: `<@${challengerId}>`, b: `<@${targetId}>` });
+    }
+
+    const challengerWins = outcome === "challenger";
+    const winnerId = challengerWins ? challengerId : targetId;
+    const loserId = challengerWins ? targetId : challengerId;
+
+    payWinner(guildId, winnerId, bet);
+
+    return formatMessage(pickRandom(DUEL_WIN), {
+      winner: `<@${winnerId}>`,
+      loser: `<@${loserId}>`,
+      amount: bet,
+      winnerChoice: choiceLabel(challengerWins ? challengerChoice : targetChoice),
+      loserChoice: choiceLabel(challengerWins ? targetChoice : challengerChoice),
+    });
+  }
+
+  private settleAbandonedDuel(
+    guildId: string,
+    duelists: string[],
+    choices: Map<string, RpsChoice>,
+    bet: number,
+  ): string {
+    const slacker = duelists.find((id) => !choices.has(id));
+    const chooser = duelists.find((id) => choices.has(id));
+
+    for (const id of duelists.filter((duelist) => choices.has(duelist))) {
+      refundStake(guildId, id, bet);
+    }
+
+    if (slacker === undefined || chooser === undefined) {
+      return pickRandom(DUEL_NO_CHOICE_BOTH);
+    }
+
+    return formatMessage(pickRandom(DUEL_NO_CHOICE_ONE), {
+      slacker: `<@${slacker}>`,
+      chooser: `<@${chooser}>`,
+      bet,
+    });
+  }
+
+  private rejectUnduellableTarget(guildId: string, challenger: GuildMember, target: User): string | undefined {
+    if (target.bot) {
+      return "Para retar a un bot, déjame el campo vacío y pelea conmigo, nyaha~.";
+    }
+
+    if (target.id === challenger.id) {
+      return "¿Un duelo contra ti mismo? Busca ayuda. O un rival.";
+    }
+
+    if (isUserExcluded(guildId, target.id)) {
+      return `<@${target.id}> está excluido de las actividades del bot. No se puede duelar con fantasmas.`;
+    }
+
+    return undefined;
+  }
+
+  private async guardHandler(guildId: string, message: string, handler: () => Promise<void>): Promise<void> {
+    try {
+      await handler();
+    } catch (error) {
+      logger.error({ err: error, guildId }, message);
+    }
   }
 }
