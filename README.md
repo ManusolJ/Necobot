@@ -150,9 +150,9 @@ this one - is the rewrite where I stopped hand-rolling the plumbing:
 - **CI on GitHub Actions**, gating deployment on typecheck, lint, formatting and tests.
 - **Containerised deployment** with a versioned deploy script.
 
-> The lesson that stuck: the first version taught me what the bot needed to do, and
-> trying to keep extending it taught me why structure exists. Neither lesson was
-> available without writing the bad version first.
+> What I learned: the first version taught me what the bot needed to do, and
+> trying to keep extending it taught me why structure exists. Through iteration,
+> I learned how to improve and take the project closer to its final goal
 
 ---
 
