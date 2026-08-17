@@ -1,7 +1,9 @@
 services:
   bot:
     user: "1000:1000"
-    build: .
+    build:
+      context: .
+      dockerfile: dockerfile
     env_file: .env
     environment:
       REDIS_HOST: redis
