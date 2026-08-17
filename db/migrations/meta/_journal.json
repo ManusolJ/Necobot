@@ -29,6 +29,13 @@
       "when": 1784129597567,
       "tag": "0003_minefield_and_exclusions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786966622798,
+      "tag": "0004_drop_trivia_wins",
+      "breakpoints": true
     }
   ]
 }
