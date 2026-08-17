@@ -2,6 +2,7 @@ import { BotPermissionNotEnough, BotPermissionsNotVerified } from "@infrastructu
 
 import { registerGuildChannel } from "@core/services/guild.service.js";
 
+import { requireGuildId } from "@shared/utils/guild-context.util.js";
 import { CHANNEL_PURPOSES } from "@shared/consts/settings.constants.js";
 import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
@@ -56,7 +57,7 @@ export class AddChannelCommand extends Command {
     }
 
     const saved = registerGuildChannel({
-      guildId: interaction.guildId!,
+      guildId: requireGuildId(interaction),
       channelId: channel.id,
       purpose,
     });
