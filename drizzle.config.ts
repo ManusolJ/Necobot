@@ -1,3 +1,5 @@
+import { DATABASE_DEFAULT_PATH } from "./src/shared/consts/config.constants.js";
+
 import "dotenv/config";
 
 import { defineConfig } from "drizzle-kit";
@@ -7,7 +9,7 @@ export default defineConfig({
   out: "./db/migrations",
   schema: "./src/infrastructure/database/schema/index.ts",
   dbCredentials: {
-    url: process.env.DATABASE_PATH ?? "./db/data.sqlite",
+    url: process.env.DATABASE_PATH ?? DATABASE_DEFAULT_PATH,
   },
   casing: "snake_case",
   breakpoints: true,
