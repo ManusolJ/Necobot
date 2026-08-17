@@ -1,9 +1,16 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 
 import { isUserExcluded, recordMineHit } from "@core/services/user.service.js";
-import { getGuildSettings, tryConsumeMine } from "@core/services/guild.service.js";
+import { getGuildSettings, restoreMine, tryConsumeMine } from "@core/services/guild.service.js";
 
-import { MINE_ADMIN_PENALTY, MINE_TIMEOUT_MS, MINE_TRIGGER_CHANCE } from "@shared/consts/minefield.constants.js";
+import {
+  MINE_TIMEOUT_MS,
+  MINE_ADMIN_PENALTY,
+  MINE_TRIGGER_CHANCE,
+  MINE_TIMEOUT_REASON,
+  MINE_TIMEOUT_SECONDS,
+  MINE_NO_POINT_PENALTY,
+} from "@shared/consts/minefield.constants.js";
 
 import type { Message } from "discord.js";
 
@@ -37,28 +44,37 @@ export class MinefieldTriggerListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
+    let announcement: string;
+
     try {
-      const member = message.member;
-      const isAdmin = member?.permissions.has(PermissionFlagsBits.Administrator) ?? false;
-
-      if (!isAdmin && member?.moderatable) {
-        await member.timeout(MINE_TIMEOUT_MS, "Pisó una mina del minefield");
-        recordMineHit(message.guildId, message.author.id, 0);
-        await message.reply(
-          `💥 **BOOM.** ${member.displayName} ha pisado una mina y estará calladito ${MINE_TIMEOUT_MS / 1000} segundos. Nyaha~.`,
-        );
-        return;
-      }
-
-      recordMineHit(message.guildId, message.author.id, MINE_ADMIN_PENALTY);
-      await message.reply(
-        `💥 **BOOM.** <@${message.author.id}> ha pisado una mina. Como eres intocable, pagas **${MINE_ADMIN_PENALTY}** puntos. La ley es la ley.`,
-      );
+      announcement = await this.detonate(message);
     } catch (error) {
+      restoreMine(message.guildId);
       logger.error(
         { err: error, guildId: message.guildId, userId: message.author.id },
-        "Failed to apply mine detonation",
+        "Failed to apply mine detonation; mine restored",
       );
+      return;
     }
+
+    await message.reply(announcement).catch((error: unknown) => {
+      logger.warn({ err: error, guildId: message.guildId }, "Failed to announce mine detonation");
+    });
+  }
+
+  private async detonate(message: Message<true>): Promise<string> {
+    const member = message.member;
+    const isAdmin = member?.permissions.has(PermissionFlagsBits.Administrator) ?? false;
+
+    if (!isAdmin && member?.moderatable) {
+      await member.timeout(MINE_TIMEOUT_MS, MINE_TIMEOUT_REASON);
+      recordMineHit(message.guildId, message.author.id, MINE_NO_POINT_PENALTY);
+
+      return `**BOOM.** ${member.displayName} ha pisado una mina y estará calladito ${MINE_TIMEOUT_SECONDS} segundos. Nyaha~.`;
+    }
+
+    recordMineHit(message.guildId, message.author.id, MINE_ADMIN_PENALTY);
+
+    return `**BOOM.** <@${message.author.id}> ha pisado una mina. Como eres intocable, pagas **${MINE_ADMIN_PENALTY}** puntos. La ley es la ley.`;
   }
 }

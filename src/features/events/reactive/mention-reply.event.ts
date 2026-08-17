@@ -12,6 +12,25 @@ import { Events, Listener } from "@sapphire/framework";
 
 const lastRequestAt = new Map<string, number>();
 
+const mentionPatterns = new Map<string, RegExp>();
+
+function mentionPattern(botId: string): RegExp {
+  let pattern = mentionPatterns.get(botId);
+  if (!pattern) {
+    pattern = new RegExp(`<@!?${botId}>`, "gu");
+    mentionPatterns.set(botId, pattern);
+  }
+  return pattern;
+}
+
+function pruneExpiredCooldowns(now: number): void {
+  for (const [key, at] of lastRequestAt) {
+    if (now - at >= AI_USER_COOLDOWN_MS) {
+      lastRequestAt.delete(key);
+    }
+  }
+}
+
 export class MentionReplyListener extends Listener<typeof Events.MessageCreate> {
   public constructor(context: Listener.LoaderContext, options: Listener.Options) {
     super(context, { ...options, event: Events.MessageCreate });
@@ -36,14 +55,15 @@ export class MentionReplyListener extends Listener<typeof Events.MessageCreate> 
     }
 
     const now = Date.now();
-    const last = lastRequestAt.get(message.author.id);
+    const cooldownKey = `${message.guildId}:${message.author.id}`;
+    const last = lastRequestAt.get(cooldownKey);
     if (last !== undefined && now - last < AI_USER_COOLDOWN_MS) {
       return;
     }
-    lastRequestAt.set(message.author.id, now);
+    pruneExpiredCooldowns(now);
+    lastRequestAt.set(cooldownKey, now);
 
-    const text =
-      message.content.replaceAll(new RegExp(`<@!?${botId}>`, "gu"), "").trim() || "(te menciona sin decir nada)";
+    const text = message.content.replaceAll(mentionPattern(botId), "").trim() || "(te menciona sin decir nada)";
     const authorName = message.member?.displayName ?? message.author.username;
 
     try {
