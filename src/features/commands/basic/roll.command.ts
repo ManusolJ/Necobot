@@ -46,23 +46,16 @@ export class RollCommand extends Command {
     const sides = interaction.options.getInteger("sides", true);
     const numberOfDice = interaction.options.getInteger("quantity", true);
 
-    if (numberOfDice === 1) {
-      const roll = randomInt(1, sides);
-      await interaction.reply(`El resultado de la tirada es: **${roll}**`);
+    const results = Array.from({ length: numberOfDice }, () => randomInt(1, sides));
+
+    if (results.length === 1) {
+      await interaction.reply(`El resultado de la tirada es: **${results[0]}**`);
       return;
     }
 
-    const results = Array.from({ length: numberOfDice }, () => randomInt(1, sides));
     const total = results.reduce((sum, roll) => sum + roll, 0);
+    const lines = results.map((roll, index) => `Tirada ${index + 1}: **${roll}**`);
 
-    let resultMessage = "Estos son los resultados:\n";
-
-    results.forEach((roll, index) => {
-      resultMessage += `Tirada ${index + 1}: **${roll}**\n`;
-    });
-
-    resultMessage += `En total: **${total}**`;
-
-    await interaction.reply(resultMessage);
+    await interaction.reply(["Estos son los resultados:", ...lines, `En total: **${total}**`].join("\n"));
   }
 }

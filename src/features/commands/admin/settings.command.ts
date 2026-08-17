@@ -1,7 +1,8 @@
-import { BotPermissionNotEnough } from "@infrastructure/errors/domain.errors.js";
+import { BotPermissionNotEnough, BotPermissionsNotVerified } from "@infrastructure/errors/domain.errors.js";
 
 import { completeGuildSetup } from "@core/services/guild.service.js";
 
+import { requireGuildId } from "@shared/utils/guild-context.util.js";
 import { AVAILABLE_PREFIXES } from "@shared/consts/settings.constants.js";
 import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
@@ -44,15 +45,11 @@ export class SettingsCommand extends Command {
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const bot = await interaction.guild?.members.fetchMe();
     const prefix = interaction.options.getString("prefix", false);
-    const roleId = interaction.options.getRole("role", false)?.id ?? null;
+    const roleId = interaction.options.getRole("role", false)?.id;
     const mainChannel = interaction.options.getChannel("main_channel", true, [ChannelType.GuildText]);
 
     if (!bot) {
-      interaction.reply({
-        content: "No pude verificar mis permisos en este servidor.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
+      throw new BotPermissionsNotVerified();
     }
 
     const canSend = botCanSendMessagesInChannel(bot, mainChannel);
@@ -62,7 +59,7 @@ export class SettingsCommand extends Command {
     }
 
     const saved = completeGuildSetup({
-      guildId: interaction.guildId!,
+      guildId: requireGuildId(interaction),
       mainChannelId: mainChannel.id,
       prefix: prefix ?? undefined,
       begRetryRoleId: roleId,

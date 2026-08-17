@@ -1,15 +1,16 @@
+import { assetPath } from "@shared/utils/asset-path.util.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
-import { CHEER_MESSAGES } from "@shared/consts/cheer-message. constants.js";
+import { CHEER_MESSAGES } from "@shared/consts/cheer-message.constants.js";
 
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
-import { join } from "node:path";
 import { Command } from "@sapphire/framework";
 import { AttachmentBuilder } from "discord.js";
 
-const CHEER_IMAGE_PATH = join(process.cwd(), "assets", "img", "cheer.jpg");
+const CHEER_IMAGE_NAME = "cheer.jpg";
+const CHEER_IMAGE_PATH = assetPath("img", CHEER_IMAGE_NAME);
 
 export class CheerCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -33,7 +34,7 @@ export class CheerCommand extends Command {
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const target = interaction.options.getUser("user", true);
 
-    const attachment = new AttachmentBuilder(CHEER_IMAGE_PATH, { name: "cheer.jpg" });
+    const attachment = new AttachmentBuilder(CHEER_IMAGE_PATH, { name: CHEER_IMAGE_NAME });
     const content = formatMessage(pickRandom(CHEER_MESSAGES), { user: `<@${target.id}>` });
 
     await interaction.reply({ content, files: [attachment] });

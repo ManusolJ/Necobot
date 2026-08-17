@@ -1,9 +1,10 @@
 import { logger } from "@infrastructure/config/logger.config.js";
-import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
 
 import { isUserExcluded, subtractPointsFromUser, sumPointsToUser } from "@core/services/user.service.js";
 
-import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
+import { requireGuildMember } from "@shared/utils/guild-context.util.js";
+
+import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { MessageFlags } from "discord.js";
@@ -30,14 +31,9 @@ export class GiftCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const guildId = interaction.guildId!;
-    const member = interaction.member as GuildMember | null;
+    const { guildId, member } = requireGuildMember(interaction);
     const target = interaction.options.getUser("user", true);
     const amount = interaction.options.getInteger("amount", true);
-
-    if (!member) {
-      throw new GuildMemberNotFound(guildId);
-    }
 
     if (target.bot) {
       await interaction.reply({
@@ -81,7 +77,7 @@ export class GiftCommand extends Command {
     }
 
     await interaction.reply(
-      `🎁 <@${member.id}> le ha regalado **${amount}** puntos a <@${target.id}>. Le quedan **${charged.points}**. Qué bonito. Qué sospechoso.`,
+      `<@${member.id}> le ha regalado **${amount}** puntos a <@${target.id}>. Le quedan **${charged.points}**. Qué bonito. Qué sospechoso.`,
     );
   }
 }

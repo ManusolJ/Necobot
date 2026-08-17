@@ -1,11 +1,10 @@
-import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
-
+import { armMines } from "@core/services/guild.service.js";
 import { subtractPointsFromUser } from "@core/services/user.service.js";
-import { armMines, getGuildSettings } from "@core/services/guild.service.js";
 
+import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 import { MAX_MINES_PER_PURCHASE, MINE_COST } from "@shared/consts/minefield.constants.js";
 
-import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { MessageFlags } from "discord.js";
@@ -36,30 +35,25 @@ export class MinefieldCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const guildId = interaction.guildId!;
-    const member = interaction.member as GuildMember | null;
+    const { guildId, member } = requireGuildMember(interaction);
     const quantity = interaction.options.getInteger("quantity", true);
 
-    if (!member) {
-      throw new GuildMemberNotFound(guildId);
-    }
-
     const cost = quantity * MINE_COST;
+    const plural = quantity === 1 ? "" : "s";
 
     const charged = subtractPointsFromUser(guildId, member.id, cost);
     if (!charged) {
       await interaction.reply({
-        content: `Nyaha~ ¿minas sin dinero, ${member.displayName}? Necesitas **${cost}** puntos para plantar ${quantity} mina${quantity === 1 ? "" : "s"}. Vuelve cuando seas solvente.`,
+        content: `Nyaha~ ¿minas sin dinero, ${member.displayName}? Necesitas **${cost}** puntos para plantar ${quantity} mina${plural}. Vuelve cuando seas solvente.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const settings = armMines(guildId, quantity);
-    const mainChannel = getGuildSettings(guildId)?.mainChannelId ?? settings.mainChannelId;
 
     await interaction.reply(
-      `**${quantity}** mina${quantity === 1 ? "" : "s"} plantada${quantity === 1 ? "" : "s"} en <#${mainChannel}>. ` +
+      `**${quantity}** mina${plural} plantada${plural} en <#${settings.mainChannelId}>. ` +
         `Hay **${settings.activeMines}** minas activas. Te quedan **${charged.points}** puntos. Esperemos que nadie tenga mala suerte, nyaha~.`,
     );
   }

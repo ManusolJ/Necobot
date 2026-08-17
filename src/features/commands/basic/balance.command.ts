@@ -1,9 +1,9 @@
-import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
-
 import { getGuildUser } from "@core/services/user.service.js";
 
+import { requireGuildMember } from "@shared/utils/guild-context.util.js";
+
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
-import type { ChatInputCommandInteraction, GuildMember, InteractionReplyOptions } from "discord.js";
+import type { ChatInputCommandInteraction, InteractionReplyOptions } from "discord.js";
 
 import { MessageFlags } from "discord.js";
 import { Command } from "@sapphire/framework";
@@ -32,13 +32,9 @@ export class BalanceCommand extends Command {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const isPublic = interaction.options.getBoolean("public", false) ?? false;
-    const member = interaction.member as GuildMember | null;
+    const { guildId, member } = requireGuildMember(interaction);
 
-    if (!member) {
-      throw new GuildMemberNotFound(interaction.guildId!);
-    }
-
-    const user = getGuildUser(interaction.guildId!, member.id);
+    const user = getGuildUser(guildId, member.id);
     const points = user?.points ?? 0;
 
     const reply: InteractionReplyOptions = {
@@ -46,11 +42,8 @@ export class BalanceCommand extends Command {
         points > 0
           ? `Tienes **${points}** puntos, ${member.displayName}. Gástalos sabiamente... o no, más contenido para mí.`
           : `Tienes **${points}** puntos, ${member.displayName}. Nyaha~ la pobreza también es un estilo de vida.`,
+      ...(isPublic ? {} : { flags: MessageFlags.Ephemeral }),
     };
-
-    if (!isPublic) {
-      reply.flags = MessageFlags.Ephemeral;
-    }
 
     await interaction.reply(reply);
   }

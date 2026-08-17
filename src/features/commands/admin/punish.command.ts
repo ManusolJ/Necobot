@@ -1,12 +1,19 @@
 import { confiscatePointsPercent } from "@core/services/user.service.js";
 
+import { PUNISH_PERCENT } from "@shared/consts/punish.constants.js";
+import { requireGuildId } from "@shared/utils/guild-context.util.js";
+
 import type { ChatInputCommandInteraction, User } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
 
-const PUNISH_PERCENT = 0.5;
+const TARGET_OPTIONS = [
+  { name: "user", description: "El usuario a castigar", required: true },
+  { name: "user2", description: "Otro usuario a castigar", required: false },
+  { name: "user3", description: "Otro usuario más a castigar", required: false },
+] as const;
 
 export class PunishCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -17,27 +24,29 @@ export class PunishCommand extends Command {
   }
 
   public override registerApplicationCommands(registry: ApplicationCommandRegistry): Awaitable<void> {
-    registry.registerChatInputCommand((builder) =>
+    registry.registerChatInputCommand((builder) => {
       builder
         .setName("punish")
         .setDescription(`Confisca el ${PUNISH_PERCENT * 100}% de los puntos de los usuarios elegidos`)
-        .addUserOption((option) => option.setName("user").setDescription("El usuario a castigar").setRequired(true))
-        .addUserOption((option) => option.setName("user2").setDescription("Otro usuario a castigar").setRequired(false))
-        .addUserOption((option) =>
-          option.setName("user3").setDescription("Otro usuario más a castigar").setRequired(false),
-        )
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    );
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
+
+      for (const target of TARGET_OPTIONS) {
+        builder.addUserOption((option) =>
+          option.setName(target.name).setDescription(target.description).setRequired(target.required),
+        );
+      }
+
+      return builder;
+    });
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const guildId = interaction.guildId!;
+    const guildId = requireGuildId(interaction);
 
-    const targets = [
-      interaction.options.getUser("user", true),
-      interaction.options.getUser("user2", false),
-      interaction.options.getUser("user3", false),
-    ].filter((user, index, all): user is User => user !== null && all.findIndex((u) => u?.id === user.id) === index);
+    const selected = TARGET_OPTIONS.map((target) => interaction.options.getUser(target.name, false));
+    const targets = selected.filter(
+      (user, index): user is User => user !== null && selected.findIndex((other) => other?.id === user.id) === index,
+    );
 
     const lines: string[] = [];
 
@@ -61,6 +70,6 @@ export class PunishCommand extends Command {
       return;
     }
 
-    await interaction.reply(`⚖️ **Castigo divino ejecutado:**\n${lines.join("\n")}`);
+    await interaction.reply(`**Castigo divino ejecutado:**\n${lines.join("\n")}`);
   }
 }

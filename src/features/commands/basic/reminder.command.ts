@@ -1,3 +1,5 @@
+import type { ReminderPayload } from "@features/events/scheduled/reminder.task.js";
+
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
@@ -7,11 +9,17 @@ import { Command } from "@sapphire/framework";
 const MAX_QUANTITY = 60;
 const MAX_NOTE_LENGTH = 200;
 
-const UNIT_MS: Record<string, number> = {
+const UNIT_MS = {
   minutes: 60_000,
   hours: 3_600_000,
   days: 86_400_000,
-};
+} as const satisfies Record<string, number>;
+
+type ReminderUnit = keyof typeof UNIT_MS;
+
+function isReminderUnit(value: string): value is ReminderUnit {
+  return value in UNIT_MS;
+}
 
 export class ReminderCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -32,9 +40,9 @@ export class ReminderCommand extends Command {
             .setDescription("Unidad de tiempo")
             .setRequired(true)
             .addChoices(
-              { name: "Minutos", value: "minutes" },
-              { name: "Horas", value: "hours" },
-              { name: "Días", value: "days" },
+              { name: "Minutos", value: "minutes" satisfies ReminderUnit },
+              { name: "Horas", value: "hours" satisfies ReminderUnit },
+              { name: "Días", value: "days" satisfies ReminderUnit },
             ),
         )
         .addIntegerOption((option) =>
@@ -60,20 +68,16 @@ export class ReminderCommand extends Command {
     const quantity = interaction.options.getInteger("quantity", true);
     const note = interaction.options.getString("message", false);
 
-    const delay = quantity * (UNIT_MS[unit] ?? UNIT_MS.minutes!);
+    const delay = quantity * UNIT_MS[isReminderUnit(unit) ? unit : "minutes"];
     const firesAt = Math.floor((Date.now() + delay) / 1000);
 
-    await this.container.tasks.create(
-      {
-        name: "reminder",
-        payload: {
-          channelId: interaction.channelId,
-          userId: interaction.user.id,
-          note: note ?? null,
-        },
-      },
-      { repeated: false, delay },
-    );
+    const payload: ReminderPayload = {
+      channelId: interaction.channelId,
+      userId: interaction.user.id,
+      note: note ?? null,
+    };
+
+    await this.container.tasks.create({ name: "reminder", payload }, { repeated: false, delay });
 
     await interaction.reply({
       content: `⏰ Hecho. Te aviso <t:${firesAt}:R> (<t:${firesAt}:f>).${note ? ` Recordatorio: **${note}**` : ""}`,

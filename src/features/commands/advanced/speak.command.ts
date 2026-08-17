@@ -1,25 +1,25 @@
 import { logger } from "@infrastructure/config/logger.config.js";
-import { GuildMemberNotFound } from "@infrastructure/errors/discord.errors.js";
 import {
   BotVoiceBusyError,
   UserNotInVoiceError,
   BotVoicePermissionError,
+  BotPermissionsNotVerified,
 } from "@infrastructure/errors/domain.errors.js";
 
 import { subtractPointsFromUser, sumPointsToUser } from "@core/services/user.service.js";
 
+import { SPEAK_POINTS_COST } from "@shared/consts/speak.constants.js";
+import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 import { playAudioInVoiceChannel } from "@shared/utils/voice-playback.util.js";
 import { AUDIO_CHOICES, resolveAudioPath } from "@shared/utils/audio-files.util.js";
 import { botCanSpeakInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
-import type { ChatInputCommandInteraction, GuildMember } from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
 import { getVoiceConnection } from "@discordjs/voice";
-
-const SPEAK_POINTS_COST = 45;
 
 export class SpeakCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -33,7 +33,7 @@ export class SpeakCommand extends Command {
     registry.registerChatInputCommand((builder) =>
       builder
         .setName("speak")
-        .setDescription("Me uno a tu canal de voz y digo una de mis frases (45pts).")
+        .setDescription(`Me uno a tu canal de voz y digo una de mis frases (${SPEAK_POINTS_COST}pts).`)
         .addStringOption((option) =>
           option
             .setName("audio")
@@ -45,13 +45,8 @@ export class SpeakCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const guildId = interaction.guildId!;
-    const member = interaction.member as GuildMember | null;
+    const { guildId, member } = requireGuildMember(interaction);
     const audioFile = interaction.options.getString("audio", true);
-
-    if (!member) {
-      throw new GuildMemberNotFound(guildId);
-    }
 
     const voiceChannel = member.voice.channel;
     if (!voiceChannel) {
@@ -63,6 +58,10 @@ export class SpeakCommand extends Command {
     }
 
     const bot = await interaction.guild?.members.fetchMe();
+    if (!bot) {
+      throw new BotPermissionsNotVerified();
+    }
+
     if (!botCanSpeakInChannel(bot, voiceChannel)) {
       throw new BotVoicePermissionError(voiceChannel.id);
     }
