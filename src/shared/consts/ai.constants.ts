@@ -1,7 +1,5 @@
 export const AI_MODEL_NAME = "necoarc";
 
-export const AI_BASE_SUPPORTS_THINKING = false;
-
 export const AI_GENERATION_TIMEOUT_MS = 60_000;
 
 export const AI_HISTORY_MAX_MESSAGES = 12;
