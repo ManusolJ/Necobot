@@ -24,19 +24,6 @@ export function deductGuildUserPoints(guildId: string, userId: string, amount: n
     .get();
 }
 
-export function upsertGuildUser(values: GuildUserInsert): GuildUser | undefined {
-  const updated = db
-    .insert(guildUsers)
-    .values(values)
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: values,
-    })
-    .returning();
-
-  return updated.get();
-}
-
 export function applyGuildUserDelta(input: {
   guildId: string;
   userId: string;
@@ -48,6 +35,8 @@ export function applyGuildUserDelta(input: {
     guildId,
     userId,
     ...deltas,
+    ...(deltas.points !== undefined ? { points: Math.max(0, deltas.points) } : {}),
+    ...(deltas.historicalPoints !== undefined ? { historicalPoints: Math.max(0, deltas.historicalPoints) } : {}),
   };
 
   const setClause: Record<string, unknown> = {};
@@ -60,10 +49,6 @@ export function applyGuildUserDelta(input: {
     setClause.historicalPoints = sql`${guildUsers.historicalPoints} + ${deltas.historicalPoints}`;
   }
 
-  if (deltas.triviaWins !== undefined) {
-    setClause.triviaWins = sql`${guildUsers.triviaWins} + ${deltas.triviaWins}`;
-  }
-
   if (deltas.timesBegged !== undefined) {
     setClause.timesBegged = sql`${guildUsers.timesBegged} + ${deltas.timesBegged}`;
   }
@@ -72,16 +57,22 @@ export function applyGuildUserDelta(input: {
     setClause.activatedMines = sql`${guildUsers.activatedMines} + ${deltas.activatedMines}`;
   }
 
-  const updated = db
+  if (Object.keys(setClause).length === 0) {
+    return (
+      db.insert(guildUsers).values(initialValues).onConflictDoNothing().returning().get() ??
+      findGuildUser(guildId, userId)
+    );
+  }
+
+  return db
     .insert(guildUsers)
     .values(initialValues)
     .onConflictDoUpdate({
       target: [guildUsers.guildId, guildUsers.userId],
       set: setClause,
     })
-    .returning();
-
-  return updated.get();
+    .returning()
+    .get();
 }
 
 export function setGuildUserExclusion(guildId: string, userId: string, excludedAt: Date | null): GuildUser | undefined {

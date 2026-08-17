@@ -32,21 +32,26 @@ export function consumeGuildMine(guildId: string): GuildSettings | undefined {
     .get();
 }
 
-export function upsertGuildSettings(settings: GuildSettingsInsert): GuildSettings | undefined {
-  const updated = db
+export function upsertGuildSettings(
+  settings: GuildSettingsInsert,
+  updates: Partial<GuildSettingsInsert>,
+): GuildSettings | undefined {
+  if (Object.keys(updates).length === 0) {
+    return (
+      db.insert(guildSettings).values(settings).onConflictDoNothing().returning().get() ??
+      findGuildSettings(settings.guildId)
+    );
+  }
+
+  return db
     .insert(guildSettings)
     .values(settings)
     .onConflictDoUpdate({
       target: guildSettings.guildId,
-      set: settings,
+      set: updates,
     })
-    .returning();
-
-  return updated.get();
-}
-
-export function findGuildChannels(guildId: string): GuildChannel[] {
-  return db.select().from(guildChannels).where(eq(guildChannels.guildId, guildId)).all();
+    .returning()
+    .get();
 }
 
 export function upsertGuildChannel(channel: GuildChannelInsert): GuildChannel | undefined {
