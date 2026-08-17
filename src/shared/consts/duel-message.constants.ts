@@ -1,3 +1,15 @@
+import type { RpsChoice } from "@shared/types/rps-choice.type.js";
+
+export const CHOICE_BUTTON: Record<RpsChoice, { label: string; emoji: string }> = {
+  rock: { label: "Piedra", emoji: "🪨" },
+  paper: { label: "Papel", emoji: "📄" },
+  scissors: { label: "Tijeras", emoji: "✂️" },
+};
+
+export function choiceLabel(choice: RpsChoice): string {
+  return `${CHOICE_BUTTON[choice].emoji} ${CHOICE_BUTTON[choice].label}`;
+}
+
 export const DUEL_NOT_FOR_YOU = "Este duelo no va contigo, metiche. Consigue tu propio drama, nyaha~.";
 
 export const DUEL_ALREADY_CHOSE = "Ya elegiste. Nada de cambiar de opinión, tramposo.";
@@ -6,7 +18,7 @@ export const DUEL_CHOICE_REGISTERED = "Elección registrada. Ahora a esperar al 
 
 export const DUEL_INVITE_TIMEOUT: readonly string[] = [
   "{target} ni se ha dignado a responder. {challenger}, acepta la indirecta. Duelo cancelado, puntos devueltos.",
-  "Cinco minutos esperando y nada. {challenger}, te han dejado en visto. {target}, cobarde. Duelo cancelado.",
+  "{minutes} minutos esperando y nada. {challenger}, te han dejado en visto. {target}, cobarde. Duelo cancelado.",
 ];
 
 export const DUEL_DENIED: readonly string[] = [
@@ -20,21 +32,21 @@ export const DUEL_TARGET_BROKE: readonly string[] = [
 ];
 
 export const DUEL_DRAW: readonly string[] = [
-  "🤝 Empate. Los dos habéis elegido lo mismo. Qué originales. Puntos devueltos, y mi tiempo perdido.",
-  "🤝 Empate... el resultado más aburrido posible. Tomad vuestros puntos y pensad en lo que habéis hecho.",
+  "Empate. Los dos habéis elegido lo mismo. Qué originales. Puntos devueltos, y mi tiempo perdido.",
+  "Empate... el resultado más aburrido posible. Tomad vuestros puntos y pensad en lo que habéis hecho.",
 ];
 
 export const DUEL_WIN: readonly string[] = [
-  "⚔️ {winnerChoice} aplasta a {loserChoice}. {winner} se lleva **{amount}** puntos y {loser} se lleva una lección.",
-  "⚔️ {winner} gana con {winnerChoice} contra {loserChoice}. **{amount}** puntos cambian de manos. {loser}, F.",
+  "{winnerChoice} aplasta a {loserChoice}. {winner} se lleva **{amount}** puntos y {loser} se lleva una lección.",
+  "{winner} gana con {winnerChoice} contra {loserChoice}. **{amount}** puntos cambian de manos. {loser}, F.",
 ];
 
 export const DUEL_NO_CHOICE_BOTH: readonly string[] = [
-  "⏱️ NINGUNO ha elegido. Cinco minutos mirándoos como pasmarotes. Os quedáis sin apuesta los dos, par de indecisos.",
+  "NINGUNO ha elegido. Cinco minutos mirándoos como pasmarotes. Os quedáis sin apuesta los dos, par de indecisos.",
 ];
 
 export const DUEL_NO_CHOICE_ONE: readonly string[] = [
-  "⏱️ {slacker} no ha elegido en cinco minutos y pierde su apuesta de **{bet}** puntos por indeciso. {chooser} recupera la suya.",
+  "{slacker} no ha elegido en cinco minutos y pierde su apuesta de **{bet}** puntos por indeciso. {chooser} recupera la suya.",
 ];
 
 export const DUEL_BOT_WIN: readonly string[] = [
@@ -48,9 +60,9 @@ export const DUEL_BOT_LOSE: readonly string[] = [
 ];
 
 export const DUEL_BOT_DRAW: readonly string[] = [
-  "🤝 Empate, {user}. Grandes mentes piensan igual... o tu mediocridad es contagiosa. Quién sabe.",
+  "Empate, {user}. Grandes mentes piensan igual... o tu mediocridad es contagiosa. Quién sabe.",
 ];
 
 export const DUEL_BOT_TIMEOUT: readonly string[] = [
-  "⏱️ ¿Me retas a duelo y luego no eliges nada, {user}? Cinco minutos de mi vida. Increíble.",
+  "¿Me retas a duelo y luego no eliges nada, {user}? Cinco minutos de mi vida. Increíble.",
 ];
