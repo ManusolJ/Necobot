@@ -1,21 +1,22 @@
 import { AppError } from "@infrastructure/errors/app-error.js";
 import { logger } from "@infrastructure/config/logger.config.js";
 
-import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
+import { safeReply } from "@shared/utils/safe-reply.util.js";
+import { FALLBACK_MESSAGE, getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 
 import type { ChatInputCommandErrorPayload } from "@sapphire/framework";
 
+import { MessageFlags } from "discord.js";
 import { Events, Listener } from "@sapphire/framework";
-import { MessageFlags, type InteractionReplyOptions } from "discord.js";
 
 export class CommandErrorListener extends Listener<typeof Events.ChatInputCommandError> {
   public constructor(context: Listener.LoaderContext, options: Listener.Options) {
     super(context, { ...options, event: Events.ChatInputCommandError });
   }
 
-  public override async run(error: unknown, payload: ChatInputCommandErrorPayload) {
+  public override async run(error: unknown, payload: ChatInputCommandErrorPayload): Promise<void> {
     const isDomain = error instanceof AppError;
-    const userMessage = isDomain ? getUserErrorMessage(error.code) : getUserErrorMessage("__unknown__");
+    const userMessage = isDomain ? getUserErrorMessage(error.code) : FALLBACK_MESSAGE;
 
     const logPayload = {
       err: error,
@@ -31,17 +32,9 @@ export class CommandErrorListener extends Listener<typeof Events.ChatInputComman
       logger.error(logPayload, "Command threw an unexpected error");
     }
 
-    const reply: InteractionReplyOptions = {
+    await safeReply(payload.interaction, {
       content: userMessage,
       flags: MessageFlags.Ephemeral,
-    };
-
-    try {
-      if (payload.interaction.replied || payload.interaction.deferred) {
-        await payload.interaction.followUp(reply);
-      } else {
-        await payload.interaction.reply(reply);
-      }
-    } catch {}
+    });
   }
 }
