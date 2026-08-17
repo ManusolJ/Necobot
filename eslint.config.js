@@ -6,12 +6,21 @@ export default tseslint.config(
   {
     ignores: ["dist/**", "node_modules/**", "coverage/**", "db/migrations/**"],
   },
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: { allowDefaultProject: ["eslint.config.js"] },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
   {
     plugins: { perfectionist },
     rules: {
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/consistent-type-imports": "error",
+      "no-console": "error",
       "perfectionist/sort-imports": [
         "error",
         {
