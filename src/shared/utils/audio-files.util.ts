@@ -1,7 +1,9 @@
+import { assetPath } from "@shared/utils/asset-path.util.js";
+
 import { readdirSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 
-const AUDIO_DIR = join(process.cwd(), "assets", "audio");
+const AUDIO_DIR = assetPath("audio");
 
 export const AUDIO_CHOICES: readonly { name: string; value: string }[] = readdirSync(AUDIO_DIR)
   .filter((file) => extname(file) === ".ogg")

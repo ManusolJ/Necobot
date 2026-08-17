@@ -1,6 +1,5 @@
 const USER_MESSAGES: Record<string, string> = {
   guild_member_not_found: "No encontré tu/este usuario en el servidor.",
-  guild_settings_not_found: "No encontré la configuración de este servidor.",
   bot_permission_not_verified: "No pude verificar mis permisos en este servidor.",
   user_not_in_voice: "Tienes que estar en un canal de voz para usar este comando.",
   bot_voice_busy: "Ya estoy hablando en otro canal. Espera a que termine, nyaha~.",
@@ -15,7 +14,7 @@ const USER_MESSAGES: Record<string, string> = {
     "Estás excluido de las actividades del bot, nyaha~. Habla con un administrador si crees que es un error.",
 };
 
-const FALLBACK_MESSAGE = "Hubo un error inesperado. Si persiste, avisa a un administrador.";
+export const FALLBACK_MESSAGE = "Hubo un error inesperado. Si persiste, avisa a un administrador.";
 
 export function getUserErrorMessage(code: string): string {
   return USER_MESSAGES[code] ?? FALLBACK_MESSAGE;
