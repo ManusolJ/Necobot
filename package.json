@@ -4,8 +4,9 @@
   "description": "Discord bot with necoarc personality and multiple features",
   "main": "dist/app.js",
   "scripts": {
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
