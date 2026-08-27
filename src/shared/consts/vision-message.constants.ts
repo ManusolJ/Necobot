@@ -8,19 +8,19 @@ export const VISION_TAG_MESSAGES: Record<VisionTagId, readonly string[]> = {
     "Burunyaa~ ese michi me mira con la superioridad que a ti te falta, {user}.",
   ],
   dog: [
+    "Perro detectado, {user}, pero los gatos siguen ganando.",
     "Un perro. Leal, obediente, sin criterio propio... me recuerda a ti, {user}.",
     "Nyaha~ un chucho. Bueno, {user}, al menos uno de los dos tiene excusa para babear.",
-    "Perro detectado. Aceptable, {user}, pero los gatos siguen ganando. Siempre.",
   ],
   energy_drink: [
-    "{user} otra vez a base de lata. Tu corazón me va a pasar la factura a mí.",
+    "Espero que seas viernes, {user}. Por que sino... Bueno, ya sabes. Tendre que usar este ladrillo.",
     "Nyaha~ una bebida energética. El desayuno de los campeones, si los campeones tuviesen taquicardia, {user}.",
-    "Eso no es una bebida, {user}, es una demanda judicial en formato lata.",
+    "{User} espero que te des cuenta que no vas a llegar a mas de 60 años. Pero bueno, para lo que aportas esta bien.",
   ],
   anime: [
+    "Detecto trazos 2D y cero vida social. Todo en orden, {user}.",
     "Un dibujito. Mis respetos, {user}, tienes el gusto exactamente donde esperaba.",
     "Nyaha~ anime. Claro que sí, {user}. Nunca cambies, sobre todo porque no puedes.",
-    "Detecto trazos 2D y cero vida social. Todo en orden, {user}.",
   ],
 };
 
