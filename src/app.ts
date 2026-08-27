@@ -14,10 +14,6 @@ import { ApplicationCommandRegistries, RegisterBehavior, SapphireClient } from "
 
 ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
 
-if (env.DISCORD_DEV_GUILD_ID) {
-  ApplicationCommandRegistries.setDefaultGuildIds([env.DISCORD_DEV_GUILD_ID]);
-}
-
 const currentPath = dirname(fileURLToPath(import.meta.url));
 
 const commandPath = join(currentPath, "features", "commands");

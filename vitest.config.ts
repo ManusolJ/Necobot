@@ -9,9 +9,10 @@ export default defineConfig({
     environment: "node",
     restoreMocks: true,
     env: {
+      LOG_LEVEL: "fatal",
       BOT_TOKEN: "test-token",
       DATABASE_PATH: ":memory:",
-      LOG_LEVEL: "fatal",
+      OLLAMA_URL: "http://localhost:11434",
     },
     coverage: {
       include: ["src/**/*.ts"],

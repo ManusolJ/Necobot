@@ -1,5 +1,4 @@
 import { logger } from "@infrastructure/config/logger.config.js";
-import { isOllamaConfigured } from "@infrastructure/ai/ollama.client.js";
 
 import { isUserExcluded } from "@core/services/user.service.js";
 import { generateChatReply } from "@core/services/conversation.service.js";
@@ -37,7 +36,7 @@ export class MentionReplyListener extends Listener<typeof Events.MessageCreate> 
   }
 
   public override async run(message: Message): Promise<void> {
-    if (!message.inGuild() || message.author.bot || !isOllamaConfigured()) {
+    if (!message.inGuild() || message.author.bot) {
       return;
     }
 

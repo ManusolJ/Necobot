@@ -15,14 +15,12 @@ const ENVIRONMENT_SCHEMA = s.object({
 
   BOT_TOKEN: s.string().lengthGreaterThan(0),
 
-  DISCORD_DEV_GUILD_ID: s.string().optional(),
-
   DATABASE_PATH: s.string().lengthGreaterThan(0).default(DATABASE_DEFAULT_PATH),
 
-  REDIS_PORT: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(65535).default(REDIS_DEFAULT_PORT),
   REDIS_HOST: s.string().lengthGreaterThan(0).default(REDIS_DEFAULT_HOST),
+  REDIS_PORT: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(65535).default(REDIS_DEFAULT_PORT),
 
-  OLLAMA_URL: s.string().url().optional(),
+  OLLAMA_URL: s.string().url().lengthGreaterThan(0),
 });
 
 const read = (name: string): string | undefined => {
@@ -43,7 +41,6 @@ function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
       LOG_LEVEL: read("LOG_LEVEL"),
 
       BOT_TOKEN: read("BOT_TOKEN"),
-      DISCORD_DEV_GUILD_ID: read("DISCORD_DEV_GUILD_ID"),
 
       DATABASE_PATH: read("DATABASE_PATH"),
 
