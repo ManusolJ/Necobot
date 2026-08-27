@@ -5,15 +5,7 @@ import type { ChatMessage } from "@shared/types/chat-message.type.js";
 
 import { AI_MODEL_NAME, AI_GENERATION_TIMEOUT_MS } from "@shared/consts/ai.constants.js";
 
-export function isOllamaConfigured(): boolean {
-  return env.OLLAMA_URL !== undefined;
-}
-
 export async function requestChatCompletion(messages: ChatMessage[]): Promise<string | undefined> {
-  if (!env.OLLAMA_URL) {
-    return undefined;
-  }
-
   try {
     const response = await fetch(`${env.OLLAMA_URL}/api/chat`, {
       method: "POST",
