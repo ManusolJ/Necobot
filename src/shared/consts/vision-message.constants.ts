@@ -1,4 +1,4 @@
-import { VisionTagId } from "@shared/types/vision-tag-id.type.js";
+import type { VisionTagId } from "@shared/types/vision-tag-id.type.js";
 
 export const VISION_TAG_MESSAGES: Record<VisionTagId, readonly string[]> = {
   cat: [

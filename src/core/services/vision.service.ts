@@ -1,10 +1,11 @@
 import { classifyImage } from "@infrastructure/ai/clip.client.js";
 
-import { VisionTag } from "@shared/types/vision-tag.type.js";
-import { VisionTagId } from "@shared/types/vision-tag-id.type.js";
-import { VisionResult } from "@shared/types/vision-result.type.js";
+import type { VisionTag } from "@shared/types/vision-tag.type.js";
+import type { LabelScore } from "@shared/types/label-score.type.js";
+import type { VisionTagId } from "@shared/types/vision-tag-id.type.js";
+import type { VisionResult } from "@shared/types/vision-result.type.js";
+
 import { VISION_TAGS, VISION_DISTRACTOR_PROMPTS } from "@shared/consts/vision.constants.js";
-import { LabelScore } from "@shared/types/label-score.type.js";
 
 const TAG_BY_ID = new Map<VisionTagId, VisionTag>(VISION_TAGS.map((tag) => [tag.id, tag]));
 

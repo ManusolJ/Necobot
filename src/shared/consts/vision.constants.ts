@@ -1,4 +1,4 @@
-import { VisionTag } from "@shared/types/vision-tag.type.js";
+import type { VisionTag } from "@shared/types/vision-tag.type.js";
 
 export const VISION_TAG_IDS = ["cat", "dog", "energy_drink", "anime"] as const;
 

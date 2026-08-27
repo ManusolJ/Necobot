@@ -1,10 +1,11 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 
+import type { LabelScore } from "@shared/types/label-score.type.js";
+import type { ImageClassifier } from "@shared/types/image-classifier.type.js";
+
 import { VISION_MODEL_NAME, VISION_MODEL_CACHE_DIR } from "@shared/consts/vision.constants.js";
 
 import { pipeline, RawImage } from "@huggingface/transformers";
-import { ImageClassifier } from "@shared/types/image-classifier.type.js";
-import { LabelScore } from "@shared/types/label-score.type.js";
 
 let classifierPromise: Promise<ImageClassifier> | undefined;
 

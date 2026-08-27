@@ -1,6 +1,6 @@
-import { logger } from "@infrastructure/config/logger.config.js";
-
 import { analyzeImage } from "@core/services/vision.service.js";
+
+import type { VisionResult } from "@shared/types/vision-result.type.js";
 
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
@@ -12,7 +12,6 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
-import { VisionResult } from "@shared/types/vision-result.type.js";
 
 export class ScanCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {

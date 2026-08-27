@@ -1,4 +1,4 @@
-import { VisionTagId } from "./vision-tag-id.type.js";
+import type { VisionTagId } from "./vision-tag-id.type.js";
 
 export interface VisionTag {
   id: VisionTagId;
