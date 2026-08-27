@@ -9,6 +9,8 @@ const USER_MESSAGES: Record<string, string> = {
   guild_channel_persist_failed: "Hubo un error al guardar el canal. Intenta de nuevo.",
   guild_settings_persist_failed: "Hubo un error al guardar la configuración. Intenta de nuevo.",
   bot_voice_permission_not_enough: "No tengo permisos para unirme o hablar en ese canal de voz.",
+  image_too_large: "Esa imagen pesa demasiado para mis ojos divinos. Máximo 8 MB.",
+  invalid_image_attachment: "Eso no es una imagen que yo pueda mirar. Solo acepto PNG, JPG o WEBP.",
   guild_not_configured: "Un administrador debe usar el comando `/settings` antes de poder usar esta interacción.",
   user_excluded:
     "Estás excluido de las actividades del bot, nyaha~. Habla con un administrador si crees que es un error.",
