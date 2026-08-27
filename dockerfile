@@ -1,4 +1,4 @@
-FROM node:22.16.0-alpine AS builder
+FROM node:22.16.0-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -9,9 +9,11 @@ COPY tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
-FROM node:22.16.0-alpine
+FROM node:22.16.0-bookworm-slim
 
-RUN apk add --no-cache ffmpeg
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -23,7 +25,11 @@ COPY --from=builder /app/dist ./dist
 COPY assets ./assets
 COPY db/migrations ./db/migrations
 
-RUN addgroup -S botuser && adduser -S botuser -G botuser
+RUN groupadd -r botuser \
+  && useradd -r -g botuser botuser \
+  && mkdir -p /app/.model-cache \
+  && chown -R botuser:botuser /app/.model-cache
+
 USER botuser
 
 CMD ["node", "dist/app.js"]

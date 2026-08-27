@@ -9,6 +9,7 @@ credentials
 node_modules/
 dist/
 coverage/
+.model-cache/
 
 .git/
 .gitignore

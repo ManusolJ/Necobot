@@ -24,6 +24,7 @@ services:
     volumes:
       - ./db/data:/app/db/data
       - ./assets:/app/assets:ro
+      - model-cache:/app/.model-cache
 
   redis:
     image: redis:7-alpine
@@ -41,3 +42,4 @@ services:
 
 volumes:
   redis-data:
+  model-cache:
