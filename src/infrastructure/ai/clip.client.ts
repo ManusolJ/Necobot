@@ -5,13 +5,18 @@ import type { ImageClassifier } from "@shared/types/image-classifier.type.js";
 
 import { VISION_MODEL_NAME, VISION_MODEL_CACHE_DIR } from "@shared/consts/vision.constants.js";
 
-import { pipeline, RawImage } from "@huggingface/transformers";
+import { resolve } from "node:path";
+import { env as transformersEnv, pipeline, RawImage } from "@huggingface/transformers";
+
+const MODEL_CACHE_PATH = resolve(VISION_MODEL_CACHE_DIR);
+
+transformersEnv.cacheDir = MODEL_CACHE_PATH;
 
 let classifierPromise: Promise<ImageClassifier> | undefined;
 
 function loadClassifier(): Promise<ImageClassifier> {
   classifierPromise ??= pipeline("zero-shot-image-classification", VISION_MODEL_NAME, {
-    cache_dir: VISION_MODEL_CACHE_DIR,
+    cache_dir: MODEL_CACHE_PATH,
   });
 
   return classifierPromise;

@@ -25,11 +25,8 @@ COPY --from=builder /app/dist ./dist
 COPY assets ./assets
 COPY db/migrations ./db/migrations
 
-RUN groupadd -r botuser \
-  && useradd -r -g botuser botuser \
-  && mkdir -p /app/.model-cache \
-  && chown -R botuser:botuser /app/.model-cache
+RUN mkdir -p /app/.model-cache && chown -R node:node /app/.model-cache
 
-USER botuser
+USER node
 
 CMD ["node", "dist/app.js"]
