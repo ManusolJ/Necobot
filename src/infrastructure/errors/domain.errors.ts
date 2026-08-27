@@ -53,3 +53,15 @@ export class BotVoicePermissionError extends AppError {
     super("bot_voice_permission_not_enough", { context: { channelId } });
   }
 }
+
+export class InvalidImageAttachmentError extends AppError {
+  public constructor(attachmentId: string, contentType: string) {
+    super("invalid_image_attachment", { context: { attachmentId, contentType } });
+  }
+}
+
+export class ImageTooLargeError extends AppError {
+  public constructor(attachmentId: string, size: number) {
+    super("image_too_large", { context: { attachmentId, size } });
+  }
+}
