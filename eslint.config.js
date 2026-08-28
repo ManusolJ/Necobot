@@ -10,7 +10,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ["eslint.config.js", "scripts/*.mjs"] },
+        projectService: { allowDefaultProject: ["eslint.config.js"] },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -55,19 +55,6 @@ export default tseslint.config(
           ],
         },
       ],
-    },
-  },
-  {
-    // Build-verification scripts run against dist/, which is outside tsconfig, so the
-    // type-aware rules have nothing to resolve. They also reassign console.error on
-    // purpose, to capture what Sapphire's loader reports.
-    files: ["scripts/*.mjs"],
-    rules: {
-      "no-console": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
     },
   },
   prettier,
