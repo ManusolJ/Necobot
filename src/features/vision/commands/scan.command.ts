@@ -48,7 +48,10 @@ export class ScanCommand extends Command {
 
     const result = await analyzeImage(image);
 
-    await interaction.editReply(this.buildReply(result, member.displayName));
+    await interaction.editReply({
+      content: this.buildReply(result, member.displayName),
+      attachments: [attachment],
+    });
   }
 
   private buildReply(result: VisionResult, displayName: string): string {
