@@ -15,6 +15,16 @@ const ENVIRONMENT_SCHEMA = s.object({
 
   BOT_TOKEN: s.string().lengthGreaterThan(0),
 
+  DISCORD_DEV_GUILD_ID: s
+    .string()
+    .regex(/^\d{17,20}$/u)
+    .optional(),
+
+  BOT_OWNER_ID: s
+    .string()
+    .regex(/^\d{17,20}$/u)
+    .optional(),
+
   DATABASE_PATH: s.string().lengthGreaterThan(0).default(DATABASE_DEFAULT_PATH),
 
   REDIS_HOST: s.string().lengthGreaterThan(0).default(REDIS_DEFAULT_HOST),
@@ -41,6 +51,9 @@ function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
       LOG_LEVEL: read("LOG_LEVEL"),
 
       BOT_TOKEN: read("BOT_TOKEN"),
+
+      BOT_OWNER_ID: read("BOT_OWNER_ID"),
+      DISCORD_DEV_GUILD_ID: read("DISCORD_DEV_GUILD_ID"),
 
       DATABASE_PATH: read("DATABASE_PATH"),
 

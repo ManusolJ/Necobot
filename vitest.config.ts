@@ -16,7 +16,13 @@ export default defineConfig({
     },
     coverage: {
       include: ["src/**/*.ts"],
-      exclude: ["src/app.ts", "src/**/*.constants.ts", "src/**/*.type.ts"],
+      exclude: [
+        "src/app.ts",
+        "src/register-stores.ts",
+        "src/**/*.constants.ts",
+        "src/**/*.messages.ts",
+        "src/**/*.types.ts",
+      ],
     },
   },
 });
