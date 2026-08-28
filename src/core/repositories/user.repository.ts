@@ -57,6 +57,10 @@ export function applyGuildUserDelta(input: {
     setClause.activatedMines = sql`${guildUsers.activatedMines} + ${deltas.activatedMines}`;
   }
 
+  if (deltas.monstersDrinked !== undefined) {
+    setClause.monstersDrinked = sql`${guildUsers.monstersDrinked} + ${deltas.monstersDrinked}`;
+  }
+
   if (Object.keys(setClause).length === 0) {
     return (
       db.insert(guildUsers).values(initialValues).onConflictDoNothing().returning().get() ??
@@ -82,6 +86,41 @@ export function setGuildUserExclusion(guildId: string, userId: string, excludedA
     .onConflictDoUpdate({
       target: [guildUsers.guildId, guildUsers.userId],
       set: { excludedAt },
+    })
+    .returning();
+
+  return updated.get();
+}
+
+export function recordMonsterDrink(input: {
+  guildId: string;
+  userId: string;
+  pointsDelta: number;
+}): GuildUser | undefined {
+  const { guildId, userId, pointsDelta } = input;
+  const now = new Date();
+  const historicalGain = Math.max(0, pointsDelta);
+
+  const initialValues: GuildUserInsert = {
+    guildId,
+    userId,
+    points: Math.max(0, pointsDelta),
+    historicalPoints: historicalGain,
+    monstersDrinked: 1,
+    lastDrinkedAt: now,
+  };
+
+  const updated = db
+    .insert(guildUsers)
+    .values(initialValues)
+    .onConflictDoUpdate({
+      target: [guildUsers.guildId, guildUsers.userId],
+      set: {
+        points: sql`${guildUsers.points} + ${pointsDelta}`,
+        historicalPoints: sql`${guildUsers.historicalPoints} + ${historicalGain}`,
+        monstersDrinked: sql`${guildUsers.monstersDrinked} + 1`,
+        lastDrinkedAt: now,
+      },
     })
     .returning();
 

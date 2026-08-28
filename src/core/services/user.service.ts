@@ -4,6 +4,7 @@ import {
   findGuildUser,
   recordBegAttempt,
   applyGuildUserDelta,
+  recordMonsterDrink,
   deductGuildUserPoints,
   setGuildUserExclusion,
 } from "@core/repositories/user.repository.js";
@@ -50,6 +51,16 @@ export function recordBeg(guildId: string, userId: string, pointsEarned: number)
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
   }
+  return result;
+}
+
+export function recordDrink(guildId: string, userId: string, pointsDelta: number): GuildUser {
+  const result = recordMonsterDrink({ guildId, userId, pointsDelta });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
   return result;
 }
 

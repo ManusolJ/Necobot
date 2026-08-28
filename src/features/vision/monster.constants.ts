@@ -1,0 +1,2 @@
+export const MIN_POINTS_CHANGE_PER_DRINK = 5;
+export const MAX_POINTS_CHANGE_PER_DRINK = 20;
