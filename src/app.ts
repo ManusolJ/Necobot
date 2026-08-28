@@ -4,6 +4,8 @@ import { closeDatabase, db } from "@infrastructure/database/client.js";
 
 import { getLogLevel } from "@shared/utils/get-log-level.util.js";
 
+import { assertPiecesLoaded, registerStores } from "./register-stores.js";
+
 import "@sapphire/plugin-scheduled-tasks/register";
 
 import { fileURLToPath } from "node:url";
@@ -16,11 +18,7 @@ ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior
 
 const currentPath = dirname(fileURLToPath(import.meta.url));
 
-const commandPath = join(currentPath, "features", "commands");
 const migrationsPath = join(currentPath, "..", "db", "migrations");
-const preconditionsPath = join(currentPath, "shared", "preconditions");
-const eventsPath = join(currentPath, "features", "events", "reactive");
-const scheduledPath = join(currentPath, "features", "events", "scheduled");
 
 const logLevel = getLogLevel(env.LOG_LEVEL);
 
@@ -70,10 +68,7 @@ async function shutdown(signal: string): Promise<void> {
   process.exit(0);
 }
 
-client.stores.get("commands").registerPath(commandPath);
-client.stores.get("listeners").registerPath(eventsPath);
-client.stores.get("scheduled-tasks").registerPath(scheduledPath);
-client.stores.get("preconditions").registerPath(preconditionsPath);
+registerStores(client);
 
 process.on("unhandledRejection", (reason) => {
   logger.error({ err: reason }, "Unhandled promise rejection");
@@ -96,6 +91,7 @@ try {
 
 try {
   await client.login(env.BOT_TOKEN);
+  assertPiecesLoaded(client);
 } catch (error) {
   logger.fatal({ err: error }, "Failed to start the bot");
   process.exit(1);
