@@ -1,5 +1,3 @@
-import type { GuildUser } from "@infrastructure/database/schema/user.schema.js";
-
 import { GuildUserPersistError } from "@infrastructure/errors/domain.errors.js";
 
 import {
@@ -9,6 +7,8 @@ import {
   deductGuildUserPoints,
   setGuildUserExclusion,
 } from "@core/repositories/user.repository.js";
+
+import type { GuildUser } from "@shared/types/guild-user.type.js";
 
 export function getGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return findGuildUser(guildId, userId);

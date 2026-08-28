@@ -3,7 +3,7 @@ import { logger } from "@infrastructure/config/logger.config.js";
 import type { LabelScore } from "@shared/types/label-score.type.js";
 import type { ImageClassifier } from "@shared/types/image-classifier.type.js";
 
-import { VISION_MODEL_NAME, VISION_MODEL_CACHE_DIR } from "@shared/consts/vision.constants.js";
+import { VISION_MODEL_NAME, VISION_MODEL_CACHE_DIR } from "./clip.constants.js";
 
 import { resolve } from "node:path";
 import { env as transformersEnv, pipeline, RawImage } from "@huggingface/transformers";

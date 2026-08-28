@@ -1,10 +1,3 @@
-import type {
-  GuildChannel,
-  GuildChannelInsert,
-  GuildSettings,
-  GuildSettingsInsert,
-} from "@infrastructure/database/schema/guild.schema.js";
-
 import { GuildChannelPersistError, GuildSettingsPersistError } from "@infrastructure/errors/domain.errors.js";
 
 import {
@@ -14,6 +7,11 @@ import {
   upsertGuildChannel,
   upsertGuildSettings,
 } from "@core/repositories/guild.repository.js";
+
+import type { GuildChannel } from "@shared/types/guild-channel.type.js";
+import type { GuildSettings } from "@shared/types/guild-settings.type.js";
+import type { GuildChannelInsert } from "@shared/types/guild-channel-insert.type.js";
+import type { GuildSettingsInsert } from "@shared/types/guild-settings-insert.type.js";
 
 export function getGuildSettings(guildId: string): GuildSettings | undefined {
   return findGuildSettings(guildId);

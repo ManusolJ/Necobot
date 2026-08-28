@@ -1,4 +1,4 @@
-import type { LogLevelName } from "@shared/consts/config.constants.js";
+import type { LogLevelName } from "@shared/types/log-level-name.type.js";
 
 import { LogLevel } from "@sapphire/framework";
 

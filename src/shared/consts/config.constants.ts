@@ -1,6 +1,13 @@
-export const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
+import type { LogLevelName } from "@shared/types/log-level-name.type.js";
 
-export type LogLevelName = (typeof LOG_LEVELS)[number];
+export const LOG_LEVELS = [
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "fatal",
+] as const satisfies readonly LogLevelName[];
 
 export const DEBUG_LOG_LEVEL: LogLevelName = "debug";
 

@@ -3,7 +3,7 @@ import { logger } from "@infrastructure/config/logger.config.js";
 
 import type { ChatMessage } from "@shared/types/chat-message.type.js";
 
-import { AI_MODEL_NAME, AI_GENERATION_TIMEOUT_MS } from "@shared/consts/ai.constants.js";
+import { AI_MODEL_NAME, AI_GENERATION_TIMEOUT_MS } from "./ollama.constants.js";
 
 export async function requestChatCompletion(messages: ChatMessage[]): Promise<string | undefined> {
   try {
