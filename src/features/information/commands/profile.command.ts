@@ -37,6 +37,7 @@ export class ProfileCommand extends Command {
         { name: "Puntos históricos", value: String(user?.historicalPoints ?? 0), inline: true },
         { name: "Veces mendigado", value: String(user?.timesBegged ?? 0), inline: true },
         { name: "Minas pisadas", value: String(user?.activatedMines ?? 0), inline: true },
+        { name: "Monsters bebidos", value: String(user?.monstersDrinked ?? 0), inline: true },
       )
       .setFooter({ text: BOT_DISPLAY_NAME })
       .setTimestamp();
