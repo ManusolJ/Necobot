@@ -1,4 +1,4 @@
-import { AI_HISTORY_TTL_MS, AI_HISTORY_MAX_MESSAGES } from "@shared/consts/ai.constants.js";
+import { AI_HISTORY_TTL_MS, AI_HISTORY_MAX_MESSAGES } from "@features/conversation/conversation.constants.js";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,7 @@ vi.mock("@infrastructure/ai/ollama.client.js", () => ({
   isOllamaConfigured: () => true,
 }));
 
-const { generateChatReply } = await import("@core/services/conversation.service.js");
+const { generateChatReply } = await import("@features/conversation/conversation.service.js");
 
 let CHANNEL = "";
 let channelCounter = 0;

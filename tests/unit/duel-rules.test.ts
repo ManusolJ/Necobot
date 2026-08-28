@@ -1,6 +1,6 @@
-import { RPS_CHOICES, resolveRps } from "@core/services/duel.service.js";
-
 import type { RpsChoice } from "@shared/types/rps-choice.type.js";
+
+import { RPS_CHOICES, resolveRps } from "@features/duel/duel.service.js";
 
 import { describe, expect, it } from "vitest";
 
