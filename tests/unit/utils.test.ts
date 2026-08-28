@@ -1,8 +1,8 @@
 import { randomInt } from "@shared/utils/random-int.util.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { getLogLevel } from "@shared/utils/get-log-level.util.js";
+import { isSameCalendarDay } from "@shared/utils/calendar.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
-import { isSameCalendarDay } from "@shared/utils/is-same-day.util.js";
 import { FALLBACK_MESSAGE, getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 
 import { LogLevel } from "@sapphire/framework";
