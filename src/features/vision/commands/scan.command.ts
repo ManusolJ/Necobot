@@ -8,7 +8,7 @@ import { analyzeImage } from "../vision.service.js";
 import { assertSupportedImage, downloadImage } from "../image-attachment.util.js";
 import { VISION_TAG_MESSAGES, VISION_UNKNOWN, VISION_FALLBACK } from "../vision.messages.js";
 
-import type { ChatInputCommandInteraction } from "discord.js";
+import { AttachmentBuilder, type ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
@@ -41,16 +41,19 @@ export class ScanCommand extends Command {
     await interaction.deferReply();
 
     const image = await downloadImage(attachment);
+
     if (!image) {
       await interaction.editReply(VISION_FALLBACK);
       return;
     }
 
+    const file = new AttachmentBuilder(Buffer.from(await image.arrayBuffer()), { name: attachment.name });
+
     const result = await analyzeImage(image);
 
     await interaction.editReply({
       content: this.buildReply(result, member.displayName),
-      attachments: [attachment],
+      files: [file],
     });
   }
 
