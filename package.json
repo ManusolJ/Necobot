@@ -55,6 +55,7 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
-    "esbuild": "^0.28.1"
+    "sharp": "^0.35.4",
+    "adm-zip": "^0.6.0"
   }
 }
