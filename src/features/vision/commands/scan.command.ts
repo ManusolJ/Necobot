@@ -8,10 +8,10 @@ import { analyzeImage } from "../vision.service.js";
 import { assertSupportedImage, downloadImage } from "../image-attachment.util.js";
 import { VISION_TAG_MESSAGES, VISION_UNKNOWN, VISION_FALLBACK } from "../vision.messages.js";
 
-import { AttachmentBuilder, type ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
+import { AttachmentBuilder, type ChatInputCommandInteraction } from "discord.js";
 
 export class ScanCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
