@@ -36,6 +36,13 @@
       "when": 1786966622798,
       "tag": "0004_drop_trivia_wins",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787932131371,
+      "tag": "0005_add_monster_drink_stat",
+      "breakpoints": true
     }
   ]
 }
