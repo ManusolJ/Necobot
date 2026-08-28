@@ -25,10 +25,9 @@ export const VISION_TAGS: readonly VisionTag[] = [
   {
     id: "energy_drink",
     prompts: [
-      "a photo of a can of energy drink",
+      "a photo of Monster Energy drink",
       "a photo of a Monster Energy can",
-      "a photo of a Red Bull can",
-      "a close-up photo of an energy drink can",
+      "a close-up photo of a Monster Energy can",
     ],
     minConfidence: 0.4,
   },
