@@ -1,12 +1,10 @@
-import type {
-  GuildChannel,
-  GuildSettings,
-  GuildChannelInsert,
-  GuildSettingsInsert,
-} from "@infrastructure/database/schema/guild.schema.js";
-
 import { db } from "@infrastructure/database/client.js";
 import { guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
+
+import type { GuildChannel } from "@shared/types/guild-channel.type.js";
+import type { GuildSettings } from "@shared/types/guild-settings.type.js";
+import type { GuildChannelInsert } from "@shared/types/guild-channel-insert.type.js";
+import type { GuildSettingsInsert } from "@shared/types/guild-settings-insert.type.js";
 
 import { and, eq, gt, sql } from "drizzle-orm";
 

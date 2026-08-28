@@ -1,8 +1,8 @@
-import type { GuildUser, GuildUserInsert } from "@infrastructure/database/schema/user.schema.js";
-
 import { db } from "@infrastructure/database/client.js";
 import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
 
+import type { GuildUser } from "@shared/types/guild-user.type.js";
+import type { GuildUserInsert } from "@shared/types/guild-user-insert.type.js";
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
 import { and, eq, gte, sql } from "drizzle-orm";

@@ -1,3 +1,1 @@
-import type { VISION_TAG_IDS } from "@shared/consts/vision.constants.js";
-
-export type VisionTagId = (typeof VISION_TAG_IDS)[number];
+export type VisionTagId = "cat" | "dog" | "energy_drink" | "anime";

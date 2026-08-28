@@ -18,6 +18,3 @@ export const guildUsers = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.guildId, table.userId] })],
 );
-
-export type GuildUser = typeof guildUsers.$inferSelect;
-export type GuildUserInsert = typeof guildUsers.$inferInsert;
