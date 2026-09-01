@@ -16,7 +16,7 @@ export function buildInfoEmbed(iconUrl?: string): EmbedBuilder {
     .addFields(
       INFO_COMMAND_GROUPS.map((group) => ({
         name: group.name,
-        value: group.commands.map((command) => `\`/${command.name}\` — ${command.description}`).join("\n"),
+        value: group.commands.map((command) => `\`/${command.name}\` - ${command.description}`).join("\n"),
       })),
     )
     .setFooter({ text: BOT_DISPLAY_NAME })
