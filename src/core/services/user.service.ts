@@ -48,14 +48,32 @@ export function recordMineHit(guildId: string, userId: string, pointPenalty: num
 
 export function recordBeg(guildId: string, userId: string, pointsEarned: number): GuildUser {
   const result = recordBegAttempt({ guildId, userId, pointsEarned });
+
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
   }
+
   return result;
 }
 
 export function recordDrink(guildId: string, userId: string, pointsDelta: number): GuildUser {
   const result = recordMonsterDrink({ guildId, userId, pointsDelta });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+export function recordSlap(guildId: string, userId: string): GuildUser {
+  const result = applyGuildUserDelta({
+    guildId,
+    userId,
+    deltas: {
+      timesSlapped: 1,
+    },
+  });
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
