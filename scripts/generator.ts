@@ -274,8 +274,10 @@ export function generatePiece(options: GenerateOptions): GeneratedPiece {
         ? listenerTemplate(className, event)
         : preconditionTemplate(className, base);
 
+  const resolvedFeature = feature ?? (type === "command" ? fileName : undefined);
+
   return {
-    path: resolveTargetPath(type, fileName, feature),
+    path: resolveTargetPath(type, fileName, resolvedFeature),
     contents,
     className,
     pieceName,

@@ -100,6 +100,33 @@ describe("generatePiece", () => {
     expect(piece.contents).toContain("export class ShopCommand extends Command");
   });
 
+  // Most features here are named after their single command, so omitting --feature starts one.
+  it("defaults a command's feature to its own name", () => {
+    expect(generatePiece({ type: "command", name: "slap" }).path).toBe("src/features/slap/commands/slap.command.ts");
+  });
+
+  // Edge case: the defaulted feature folder must use the kebab form, not the raw input.
+  it("uses the kebab name when defaulting the feature", () => {
+    expect(generatePiece({ type: "command", name: "MonsterTime" }).path).toBe(
+      "src/features/monster-time/commands/monster-time.command.ts",
+    );
+  });
+
+  // An explicit feature must still win, so a command can join an existing feature.
+  it("prefers an explicit feature over the default", () => {
+    expect(generatePiece({ type: "command", name: "shop", feature: "economy" }).path).toBe(
+      "src/features/economy/commands/shop.command.ts",
+    );
+  });
+
+  // The default is command-only: listeners and preconditions still belong in shared by default.
+  it("does not default the feature for listeners or preconditions", () => {
+    expect(generatePiece({ type: "listener", name: "welcome" }).path).toBe("src/shared/listeners/welcome.listener.ts");
+    expect(generatePiece({ type: "precondition", name: "OwnerHasRole" }).path).toBe(
+      "src/shared/preconditions/owner-has-role.precondition.ts",
+    );
+  });
+
   // Normal case: generated commands inherit the repo's default precondition pair.
   it("wires the default preconditions onto a command", () => {
     const piece = generatePiece({ type: "command", name: "shop", feature: "economy" });
