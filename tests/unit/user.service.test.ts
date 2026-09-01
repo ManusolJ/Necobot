@@ -41,6 +41,7 @@ function guildUser(overrides: Partial<GuildUser> = {}): GuildUser {
     userId: USER,
     points: 0,
     timesBegged: 0,
+    timesSlapped: 0,
     scannedThings: 0,
     activatedMines: 0,
     monstersDrinked: 0,
