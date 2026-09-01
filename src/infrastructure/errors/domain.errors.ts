@@ -65,3 +65,9 @@ export class ImageTooLargeError extends AppError {
     super("image_too_large", { context: { attachmentId, size } });
   }
 }
+
+export class TargetIsExcluded extends AppError {
+  public constructor(guildId: string, targetId: string) {
+    super("target_excluded", { context: { guildId, targetId } });
+  }
+}
