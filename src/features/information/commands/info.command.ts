@@ -1,6 +1,6 @@
 import { BOT_DISPLAY_NAME, EMBED_COLOR } from "@shared/consts/branding.constants.js";
 
-import { INFO_COMMAND_GROUPS, INFO_EMBED_INTRO, INFO_EMBED_TITLE } from "../information.constants.js";
+import { INFO_EMBED_INTRO, INFO_EMBED_TITLE, INFO_COMMAND_GROUPS } from "../information.constants.js";
 
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, InteractionReplyOptions } from "discord.js";

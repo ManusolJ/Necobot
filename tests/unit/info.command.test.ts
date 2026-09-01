@@ -4,7 +4,7 @@ import { MINE_COST } from "@features/minefield/minefield.constants.js";
 import { SPEAK_POINTS_COST } from "@features/voice/voice.constants.js";
 import { PUNISH_PERCENT } from "@features/moderation/moderation.constants.js";
 import { buildInfoEmbed } from "@features/information/commands/info.command.js";
-import { INFO_COMMAND_GROUPS, INFO_EMBED_TITLE } from "@features/information/information.constants.js";
+import { INFO_EMBED_TITLE, INFO_COMMAND_GROUPS } from "@features/information/information.constants.js";
 
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -124,7 +124,7 @@ describe("buildInfoEmbed", () => {
 
     for (const [index, group] of INFO_COMMAND_GROUPS.entries()) {
       for (const command of group.commands) {
-        expect(fields[index]?.value).toContain(`\`/${command.name}\` — ${command.description}`);
+        expect(fields[index]?.value).toContain(`\`/${command.name}\` - ${command.description}`);
       }
     }
   });
