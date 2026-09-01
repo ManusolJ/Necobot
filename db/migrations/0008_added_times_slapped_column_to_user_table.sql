@@ -1,0 +1,1 @@
+ALTER TABLE `guild_users` ADD `times_slapped` integer DEFAULT 0 NOT NULL;

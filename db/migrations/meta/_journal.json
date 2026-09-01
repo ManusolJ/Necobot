@@ -57,6 +57,13 @@
       "when": 1788261489293,
       "tag": "0007_added_scanned_things_column_to_user_table",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1788274938616,
+      "tag": "0008_added_times_slapped_column_to_user_table",
+      "breakpoints": true
     }
   ]
 }

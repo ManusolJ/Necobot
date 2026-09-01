@@ -65,6 +65,10 @@ export function applyGuildUserDelta(input: {
     setClause.scannedThings = sql`${guildUsers.scannedThings} + ${deltas.scannedThings}`;
   }
 
+  if (deltas.timesSlapped !== undefined) {
+    setClause.timesSlapped = sql`${guildUsers.timesSlapped} + ${deltas.timesSlapped}`;
+  }
+
   if (Object.keys(setClause).length === 0) {
     return (
       db.insert(guildUsers).values(initialValues).onConflictDoNothing().returning().get() ??
