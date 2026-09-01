@@ -20,7 +20,7 @@ export class SlapCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
     super(context, {
       ...options,
-      preconditions: ["GuildConfigured", "NotExcluded", "NotABot"],
+      preconditions: ["GuildConfigured", "NotExcluded", "NotABot", "NotSelf"],
     });
   }
 

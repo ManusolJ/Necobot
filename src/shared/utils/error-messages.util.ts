@@ -2,6 +2,7 @@ const USER_MESSAGES: Record<string, string> = {
   guild_member_not_found: "No encontré tu/este usuario en el servidor.",
   target_excluded: "Este usuario esta excluido de las actividades del bot.",
   target_is_bot: "Los bots no sentimos nada, nyaha~. Busca a alguien de carne y hueso.",
+  target_is_self: "Hacerte eso a ti mismo no tiene ninguna gracia. Elige a otra victima.",
   image_too_large: "Esa imagen pesa demasiado para mis ojos divinos. Máximo 8 MB.",
   bot_permission_not_verified: "No pude verificar mis permisos en este servidor.",
   user_not_in_voice: "Tienes que estar en un canal de voz para usar este comando.",
