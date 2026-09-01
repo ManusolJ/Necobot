@@ -23,5 +23,5 @@
     }
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["src/**/*.ts", "tests/**/*.ts", "drizzle.config.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "drizzle.config.ts", "vitest.config.ts"]
 }
