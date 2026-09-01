@@ -11,6 +11,7 @@ export const guildUsers = sqliteTable(
     userId: text("user_id").notNull(),
     points: integer("points").notNull().default(0),
     timesBegged: integer("times_begged").notNull().default(0),
+    scannedThings: integer("scanned_things").notNull().default(0),
     activatedMines: integer("activated_mines").notNull().default(0),
     monstersDrinked: integer("monsters_drinked").notNull().default(0),
     historicalPoints: integer("historical_points").notNull().default(0),
