@@ -57,6 +57,14 @@ export function readStringFlag(flags: Map<string, string | true>, key: string): 
   return typeof value === "string" ? value : undefined;
 }
 
+export function missingNameUsage(type: PieceType, flags: Map<string, string | true>): string {
+  const passed = [...flags.entries()]
+    .map(([key, value]) => (value === true ? `--${key}` : `--${key} ${value}`))
+    .join(" ");
+
+  return `npm run g:${type} -- ${passed === "" ? "" : `${passed} `}<name>`;
+}
+
 const SUFFIXES: Record<PieceType, string> = {
   command: "Command",
   listener: "Listener",

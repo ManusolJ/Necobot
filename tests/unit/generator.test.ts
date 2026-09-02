@@ -7,6 +7,7 @@ import {
   DEFAULT_EVENT,
   readStringFlag,
   resolveTargetPath,
+  missingNameUsage,
 } from "../../scripts/generator.js";
 
 import { describe, expect, it } from "vitest";
@@ -313,5 +314,40 @@ describe("readStringFlag", () => {
   // Edge case: an absent flag reads as undefined so the generator falls back to its default.
   it("returns undefined for a missing flag", () => {
     expect(readStringFlag(new Map(), "feature")).toBeUndefined();
+  });
+});
+
+describe("missingNameUsage", () => {
+  // The common trap: --feature swallows the last token, so the suggestion must keep their flag and add a name.
+  it("echoes the flags that were passed back with a name slot", () => {
+    const { flags } = parseArgs(["--feature", "uwufier"]);
+
+    expect(missingNameUsage("listener", flags)).toBe("npm run g:listener -- --feature uwufier <name>");
+  });
+
+  // Edge case: with no flags at all the suggestion collapses to the bare form, with no stray spacing.
+  it("suggests the bare form when no flags were passed", () => {
+    expect(missingNameUsage("precondition", new Map())).toBe("npm run g:precondition -- <name>");
+  });
+
+  // Edge case: a boolean flag has no value, so it must be echoed on its own rather than as "--force true".
+  it("echoes a boolean flag without a value", () => {
+    const { flags } = parseArgs(["--force"]);
+
+    expect(missingNameUsage("command", flags)).toBe("npm run g:command -- --force <name>");
+  });
+
+  // Every flag the caller typed has to survive into the suggestion, or the fix would drop their intent.
+  it("keeps every flag in the order they were given", () => {
+    const { flags } = parseArgs(["--feature", "uwufier", "--event", "GuildMemberAdd", "--force"]);
+
+    expect(missingNameUsage("listener", flags)).toBe(
+      "npm run g:listener -- --feature uwufier --event GuildMemberAdd --force <name>",
+    );
+  });
+
+  // The suggestion has to name the piece type the caller actually asked for.
+  it.each(PIECE_TYPES)("names the %s script", (type) => {
+    expect(missingNameUsage(type, new Map())).toContain(`g:${type}`);
   });
 });

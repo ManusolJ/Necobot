@@ -1,6 +1,6 @@
 import type { PieceType } from "@shared/types/piece.type.js";
 
-import { generatePiece, parseArgs, PIECE_TYPES, readStringFlag } from "./generator.js";
+import { generatePiece, missingNameUsage, parseArgs, PIECE_TYPES, readStringFlag } from "./generator.js";
 
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -70,7 +70,13 @@ function main(): number {
   const name = positionals[0];
 
   if (name === undefined) {
-    write("stderr", `Missing name. Usage: npm run g:${type} -- <name>`);
+    write("stderr", "Missing name.");
+    write("stderr", `  ${missingNameUsage(type, flags)}`);
+
+    if (type === "listener") {
+      write("stderr", "  Listeners are named for what they do, not for their feature (mention-reply, vision-warmup).");
+    }
+
     return 1;
   }
 
