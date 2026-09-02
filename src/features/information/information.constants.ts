@@ -4,6 +4,7 @@ import { SLAP_COST } from "@features/slap/slap.constants.js";
 import { MINE_COST } from "@features/minefield/minefield.constants.js";
 import { SPEAK_POINTS_COST } from "@features/voice/voice.constants.js";
 import { PUNISH_PERCENT } from "@features/moderation/moderation.constants.js";
+import { UWUFY_COST, UWUFY_MESSAGE_COUNT } from "@features/uwufier/uwufier.constants.js";
 
 export const INFO_EMBED_TITLE = "Mis comandos";
 
@@ -39,6 +40,10 @@ export const INFO_COMMAND_GROUPS: readonly CommandGroup[] = [
     commands: [
       { name: "cheer", description: "Felicita el cumpleaños a alguien." },
       { name: "slap", description: `Dale un slap a quien se lo merezca (${SLAP_COST}pts).` },
+      {
+        name: "uwufier",
+        description: `Uwufica los proximos ${UWUFY_MESSAGE_COUNT} mensajes de alguien (${UWUFY_COST}pts).`,
+      },
       { name: "reminder", description: "Te aviso con una mención cuando pase el tiempo que elijas." },
       { name: "speak", description: `Me uno a tu canal de voz y suelto una frase (${SPEAK_POINTS_COST}pts).` },
     ],

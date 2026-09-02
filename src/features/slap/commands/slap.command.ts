@@ -50,7 +50,6 @@ export class SlapCommand extends Command {
       return;
     }
 
-    // The slapper has already paid, so anything that fails from here has to hand the points back.
     try {
       recordSlap(guildId, target.id);
 
