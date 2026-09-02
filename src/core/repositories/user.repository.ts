@@ -5,7 +5,7 @@ import type { GuildUser } from "@shared/types/guild-user.type.js";
 import type { GuildUserInsert } from "@shared/types/guild-user-insert.type.js";
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gt, gte, sql } from "drizzle-orm";
 
 export function findGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return db
@@ -98,6 +98,32 @@ export function setGuildUserExclusion(guildId: string, userId: string, excludedA
     .returning();
 
   return updated.get();
+}
+
+export function setGuildUserUwufication(
+  guildId: string,
+  userId: string,
+  numberOfMessages: number,
+): GuildUser | undefined {
+  const updated = db
+    .insert(guildUsers)
+    .values({ guildId, userId, isUwufied: numberOfMessages })
+    .onConflictDoUpdate({
+      target: [guildUsers.guildId, guildUsers.userId],
+      set: { isUwufied: numberOfMessages },
+    })
+    .returning();
+
+  return updated.get();
+}
+
+export function consumeGuildUserUwufication(guildId: string, userId: string): GuildUser | undefined {
+  return db
+    .update(guildUsers)
+    .set({ isUwufied: sql`${guildUsers.isUwufied} - 1` })
+    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId), gt(guildUsers.isUwufied, 0)))
+    .returning()
+    .get();
 }
 
 export function recordMonsterDrink(input: {

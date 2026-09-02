@@ -7,6 +7,8 @@ import {
   recordMonsterDrink,
   deductGuildUserPoints,
   setGuildUserExclusion,
+  setGuildUserUwufication,
+  consumeGuildUserUwufication,
 } from "@core/repositories/user.repository.js";
 
 import type { GuildUser } from "@shared/types/guild-user.type.js";
@@ -19,6 +21,10 @@ export function isUserExcluded(guildId: string, userId: string): boolean {
   return findGuildUser(guildId, userId)?.excludedAt != null;
 }
 
+export function isUserUwufied(guildId: string, userId: string): boolean {
+  return (findGuildUser(guildId, userId)?.isUwufied ?? 0) > 0;
+}
+
 export function setUserExclusion(guildId: string, userId: string, excluded: boolean): GuildUser {
   const result = setGuildUserExclusion(guildId, userId, excluded ? new Date() : null);
 
@@ -27,6 +33,20 @@ export function setUserExclusion(guildId: string, userId: string, excluded: bool
   }
 
   return result;
+}
+
+export function setUserUwufication(guildId: string, userId: string, numberOfMessages: number): GuildUser {
+  const result = setGuildUserUwufication(guildId, userId, numberOfMessages);
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+export function consumeUwufiedMessage(guildId: string, userId: string): boolean {
+  return consumeGuildUserUwufication(guildId, userId) !== undefined;
 }
 
 export function recordMineHit(guildId: string, userId: string, pointPenalty: number): GuildUser {
