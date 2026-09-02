@@ -1,0 +1,1 @@
+ALTER TABLE `guild_users` ADD `is_uwufied` integer DEFAULT 0 NOT NULL;

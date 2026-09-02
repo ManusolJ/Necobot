@@ -64,6 +64,13 @@
       "when": 1788274938616,
       "tag": "0008_added_times_slapped_column_to_user_table",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788346867155,
+      "tag": "0009_added_uwufied_column_to_user_table",
+      "breakpoints": true
     }
   ]
 }

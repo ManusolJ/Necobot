@@ -10,6 +10,7 @@ export const guildUsers = sqliteTable(
       .references(() => guildSettings.guildId, { onDelete: "cascade" }),
     userId: text("user_id").notNull(),
     points: integer("points").notNull().default(0),
+    isUwufied: integer("is_uwufied").notNull().default(0),
     timesBegged: integer("times_begged").notNull().default(0),
     timesSlapped: integer("times_slapped").notNull().default(0),
     scannedThings: integer("scanned_things").notNull().default(0),
