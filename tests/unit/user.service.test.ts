@@ -10,6 +10,8 @@ const applyGuildUserDelta = vi.hoisted(() => vi.fn());
 const recordMonsterDrink = vi.hoisted(() => vi.fn());
 const deductGuildUserPoints = vi.hoisted(() => vi.fn());
 const setGuildUserExclusion = vi.hoisted(() => vi.fn());
+const setGuildUserUwufication = vi.hoisted(() => vi.fn());
+const consumeGuildUserUwufication = vi.hoisted(() => vi.fn());
 
 vi.mock("@core/repositories/user.repository.js", () => ({
   findGuildUser,
@@ -18,16 +20,22 @@ vi.mock("@core/repositories/user.repository.js", () => ({
   recordMonsterDrink,
   deductGuildUserPoints,
   setGuildUserExclusion,
+  setGuildUserUwufication,
+  consumeGuildUserUwufication,
 }));
 
 const {
   recordBeg,
+  recordSlap,
   getGuildUser,
   recordDrink,
   recordMineHit,
   isUserExcluded,
+  isUserUwufied,
   sumPointsToUser,
   setUserExclusion,
+  setUserUwufication,
+  consumeUwufiedMessage,
   subtractPointsFromUser,
   confiscatePointsPercent,
 } = await import("@core/services/user.service.js");
@@ -40,6 +48,7 @@ function guildUser(overrides: Partial<GuildUser> = {}): GuildUser {
     guildId: GUILD,
     userId: USER,
     points: 0,
+    isUwufied: 0,
     timesBegged: 0,
     timesSlapped: 0,
     scannedThings: 0,
@@ -60,6 +69,8 @@ beforeEach(() => {
   recordMonsterDrink.mockReset();
   deductGuildUserPoints.mockReset();
   setGuildUserExclusion.mockReset();
+  setGuildUserUwufication.mockReset();
+  consumeGuildUserUwufication.mockReset();
 });
 
 describe("getGuildUser", () => {
@@ -139,6 +150,85 @@ describe("setUserExclusion", () => {
         context: { guildId: GUILD, userId: USER },
       }),
     );
+  });
+});
+
+describe("isUserUwufied", () => {
+  // Normal case: a positive counter means the target still owes uwufied messages.
+  it("reports a user with messages left as uwufied", () => {
+    findGuildUser.mockReturnValue(guildUser({ isUwufied: 3 }));
+
+    expect(isUserUwufied(GUILD, USER)).toBe(true);
+  });
+
+  // Normal case: a spent counter means the debuff is over.
+  it("reports a user with a spent counter as not uwufied", () => {
+    findGuildUser.mockReturnValue(guildUser({ isUwufied: 0 }));
+
+    expect(isUserUwufied(GUILD, USER)).toBe(false);
+  });
+
+  // Edge case: an unknown user has nothing pending, and must never default to uwufied.
+  it("treats a missing user as not uwufied", () => {
+    findGuildUser.mockReturnValue(undefined);
+
+    expect(isUserUwufied(GUILD, USER)).toBe(false);
+  });
+
+  // Edge case: a counter that somehow went negative is still nothing left to spend.
+  it("treats a negative counter as not uwufied", () => {
+    findGuildUser.mockReturnValue(guildUser({ isUwufied: -1 }));
+
+    expect(isUserUwufied(GUILD, USER)).toBe(false);
+  });
+});
+
+describe("setUserUwufication", () => {
+  // Normal case: the purchased message count is handed straight to the repository.
+  it("stores the requested message count", () => {
+    const row = guildUser({ isUwufied: 5 });
+    setGuildUserUwufication.mockReturnValue(row);
+
+    expect(setUserUwufication(GUILD, USER, 5)).toBe(row);
+    expect(setGuildUserUwufication).toHaveBeenCalledWith(GUILD, USER, 5);
+  });
+
+  // Edge case: zero clears the debuff, which the same write has to support.
+  it("supports clearing the counter", () => {
+    setGuildUserUwufication.mockReturnValue(guildUser({ isUwufied: 0 }));
+
+    expect(setUserUwufication(GUILD, USER, 0).isUwufied).toBe(0);
+  });
+
+  // Error handling: the command refunds on a throw, so a failed write must not look successful.
+  it("throws when the write returns no row", () => {
+    setGuildUserUwufication.mockReturnValue(undefined);
+
+    expect(() => setUserUwufication(GUILD, USER, 5)).toThrow(GuildUserPersistError);
+  });
+});
+
+describe("consumeUwufiedMessage", () => {
+  // Normal case: the guarded update matched a row, so one paid message was spent.
+  it("reports success when a message was spent", () => {
+    consumeGuildUserUwufication.mockReturnValue(guildUser({ isUwufied: 4 }));
+
+    expect(consumeUwufiedMessage(GUILD, USER)).toBe(true);
+    expect(consumeGuildUserUwufication).toHaveBeenCalledWith(GUILD, USER);
+  });
+
+  // Edge case: with nothing left the guarded update matches no row, which must read as a plain false.
+  it("reports failure when nothing was left to spend", () => {
+    consumeGuildUserUwufication.mockReturnValue(undefined);
+
+    expect(consumeUwufiedMessage(GUILD, USER)).toBe(false);
+  });
+
+  // The row is mapped to a boolean so callers can use it directly, matching tryConsumeMine.
+  it("returns a boolean rather than the row", () => {
+    consumeGuildUserUwufication.mockReturnValue(guildUser({ isUwufied: 0 }));
+
+    expect(consumeUwufiedMessage(GUILD, USER)).toBe(true);
   });
 });
 
@@ -227,6 +317,47 @@ describe("recordDrink", () => {
     recordMonsterDrink.mockReturnValue(undefined);
 
     expect(() => recordDrink(GUILD, USER, 20)).toThrow(GuildUserPersistError);
+  });
+});
+
+describe("recordSlap", () => {
+  // Normal case: a slap only bumps the counter, so that is the whole delta.
+  it("increments the slap counter by one", () => {
+    const row = guildUser({ timesSlapped: 1 });
+    applyGuildUserDelta.mockReturnValue(row);
+
+    expect(recordSlap(GUILD, USER)).toBe(row);
+    expect(applyGuildUserDelta).toHaveBeenCalledWith({
+      guildId: GUILD,
+      userId: USER,
+      deltas: { timesSlapped: 1 },
+    });
+  });
+
+  // The cost is charged separately to the slapper, so recording must not move the target's points.
+  it("does not touch points or any other counter", () => {
+    applyGuildUserDelta.mockReturnValue(guildUser({ timesSlapped: 1 }));
+
+    recordSlap(GUILD, USER);
+
+    const { deltas } = applyGuildUserDelta.mock.calls[0]?.[0] as { deltas: Record<string, number> };
+    expect(Object.keys(deltas)).toEqual(["timesSlapped"]);
+  });
+
+  // The counter belongs to whoever was slapped, so the id passed through is the one recorded.
+  it("records against the user it was given", () => {
+    applyGuildUserDelta.mockReturnValue(guildUser({ userId: "target-9" }));
+
+    recordSlap(GUILD, "target-9");
+
+    expect(applyGuildUserDelta).toHaveBeenCalledWith(expect.objectContaining({ userId: "target-9" }));
+  });
+
+  // Error handling: the command refunds on a throw, so a failed write must not look successful.
+  it("throws when the write returns no row", () => {
+    applyGuildUserDelta.mockReturnValue(undefined);
+
+    expect(() => recordSlap(GUILD, USER)).toThrow(GuildUserPersistError);
   });
 });
 
