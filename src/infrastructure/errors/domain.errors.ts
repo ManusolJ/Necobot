@@ -71,3 +71,9 @@ export class TargetIsExcluded extends AppError {
     super("target_excluded", { context: { guildId, targetId } });
   }
 }
+
+export class CopypastaFetchError extends AppError {
+  public constructor(subreddit: string) {
+    super("copypasta_fetch_failed", { context: { subreddit } });
+  }
+}

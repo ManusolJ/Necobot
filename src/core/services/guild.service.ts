@@ -3,6 +3,7 @@ import { GuildChannelPersistError, GuildSettingsPersistError } from "@infrastruc
 import {
   consumeGuildMine,
   findGuildSettings,
+  findChannelsByPurpose,
   incrementGuildMines,
   upsertGuildChannel,
   upsertGuildSettings,
@@ -67,4 +68,8 @@ export function tryConsumeMine(guildId: string): boolean {
 
 export function restoreMine(guildId: string): void {
   incrementGuildMines(guildId, 1);
+}
+
+export function getChannelsByPurpose(purpose: string): GuildChannel[] {
+  return findChannelsByPurpose(purpose);
 }

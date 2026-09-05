@@ -64,3 +64,7 @@ export function upsertGuildChannel(channel: GuildChannelInsert): GuildChannel | 
 
   return updated.get();
 }
+
+export function findChannelsByPurpose(purpose: string): GuildChannel[] {
+  return db.select().from(guildChannels).where(eq(guildChannels.purpose, purpose)).all();
+}
