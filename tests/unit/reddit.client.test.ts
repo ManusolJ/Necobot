@@ -22,7 +22,7 @@ function tokenResponse(): unknown {
 }
 
 function child(data: Record<string, unknown>): unknown {
-  return { data: { id: "a1", title: "Un titulo", selftext: "cuerpo", permalink: "/r/x/a1", ...data } };
+  return { data: { id: "a1", title: "Un titulo", selftext: "cuerpo", ...data } };
 }
 
 function listingResponse(children: unknown[]): unknown {
@@ -68,7 +68,7 @@ describe("fetchTopPosts", () => {
     fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(listingResponse([child({})]));
 
     expect(await fetchTopPosts("copypasta_es", "week", 25)).toEqual([
-      { id: "a1", title: "Un titulo", selftext: "cuerpo", permalink: "/r/x/a1" },
+      { id: "a1", title: "Un titulo", selftext: "cuerpo" },
     ]);
   });
 
@@ -115,6 +115,17 @@ describe("fetchTopPosts", () => {
     fetchMock
       .mockResolvedValueOnce(tokenResponse())
       .mockResolvedValueOnce(listingResponse([child({ stickied: true }), child({ id: "b2" })]));
+
+    const posts = await fetchTopPosts("copypasta_es", "week", 25);
+
+    expect(posts?.map((post) => post.id)).toEqual(["b2"]);
+  });
+
+  // Error handling: NSFW pastas must never be posted into a channel that may not be age-gated.
+  it("skips over_18 posts", async () => {
+    fetchMock
+      .mockResolvedValueOnce(tokenResponse())
+      .mockResolvedValueOnce(listingResponse([child({ over_18: true }), child({ id: "b2" })]));
 
     const posts = await fetchTopPosts("copypasta_es", "week", 25);
 
@@ -215,6 +226,26 @@ describe("fetchTopPosts", () => {
     const second = await fetchTopPosts("copypasta_es", "week", 25);
 
     expect(second).toEqual(first);
+  });
+
+  // Error handling: the fallback is per-listing, so a blocked subreddit must not serve another one's posts.
+  it("does not serve one subreddit's cached listing for another", async () => {
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(listingResponse([child({})]));
+    await fetchTopPosts("copypasta_es", "week", 25);
+
+    fetchMock.mockResolvedValueOnce(errorResponse(403));
+
+    expect(await fetchTopPosts("memes_es", "day", 25)).toBeUndefined();
+  });
+
+  // Edge case: the same listing asked for with a different timeframe is a different cache entry.
+  it("keys the cached listing by timeframe and limit", async () => {
+    fetchMock.mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(listingResponse([child({})]));
+    await fetchTopPosts("copypasta_es", "week", 25);
+
+    fetchMock.mockResolvedValueOnce(errorResponse(403));
+
+    expect(await fetchTopPosts("copypasta_es", "week", 50)).toBeUndefined();
   });
 
   // Edge case: once the cache is cleared there is nothing to fall back to.
