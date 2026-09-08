@@ -13,6 +13,8 @@ export const DEBUG_LOG_LEVEL: LogLevelName = "debug";
 
 export const BOT_TIMEZONE = "Europe/Madrid";
 
+export const DISCORD_MAX_MESSAGE_LENGTH = 2_000;
+
 export const REDIS_DEFAULT_PORT = 6379;
 export const REDIS_DEFAULT_HOST = "127.0.0.1";
 
