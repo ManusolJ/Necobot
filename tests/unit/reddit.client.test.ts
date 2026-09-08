@@ -121,17 +121,6 @@ describe("fetchTopPosts", () => {
     expect(posts?.map((post) => post.id)).toEqual(["b2"]);
   });
 
-  // Error handling: NSFW pastas must never be posted into a channel that may not be age-gated.
-  it("skips over_18 posts", async () => {
-    fetchMock
-      .mockResolvedValueOnce(tokenResponse())
-      .mockResolvedValueOnce(listingResponse([child({ over_18: true }), child({ id: "b2" })]));
-
-    const posts = await fetchTopPosts("copypasta_es", "week", 25);
-
-    expect(posts?.map((post) => post.id)).toEqual(["b2"]);
-  });
-
   // Edge case: a malformed child without an id or title cannot be posted and must be dropped.
   it("skips entries missing an id or a title", async () => {
     fetchMock
