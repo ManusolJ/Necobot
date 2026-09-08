@@ -72,13 +72,6 @@ async function requestListing(
   }
 }
 
-/**
- * Reads the top posts of a subreddit through the Android client emulation.
- *
- * Falls back to the last successful listing when Reddit refuses the request, so a
- * transient block costs freshness rather than the whole feature. Returns undefined
- * only when there is nothing cached to fall back to.
- */
 export async function fetchTopPosts(
   subreddit: string,
   timeframe: RedditTimeframe,
@@ -87,7 +80,6 @@ export async function fetchTopPosts(
   let result = await requestListing(subreddit, timeframe, limit);
 
   if (result === "unauthorized") {
-    // The token expired early or was dropped server-side; mint a fresh one and retry once.
     invalidateSession();
     result = await requestListing(subreddit, timeframe, limit);
   }

@@ -21,17 +21,10 @@ function pickRandom<T>(values: readonly [T, ...T[]]): T {
   return values[index] ?? values[0];
 }
 
-/** Mirrors the connection-quality figure the Android app reports on every call. */
 function randomQualityOfService(): string {
   return (Math.floor(Math.random() * 99_000 + 1_000) / 1_000).toFixed(3);
 }
 
-/**
- * Headers shared by the token request and every later API call. The device id and
- * User-Agent are fixed for the life of a session on purpose: rotating them per
- * request is what makes traffic look automated, which is how the previous
- * User-Agent-shuffling fetcher got itself blocked.
- */
 export function buildAndroidHeaders(session: Omit<RedditSession, "accessToken" | "expiresAt">): Record<string, string> {
   const headers: Record<string, string> = {
     "User-Agent": session.userAgent,
