@@ -11,6 +11,7 @@ const USER_MESSAGES: Record<string, string> = {
   bot_permission_not_enough: "No tengo permisos para mandar mensajes en ese canal.",
   guild_user_persist_failed: "Hubo un error al guardar tus datos. Intenta de nuevo.",
   guild_channel_persist_failed: "Hubo un error al guardar el canal. Intenta de nuevo.",
+  copypasta_fetch_failed: "No pude traer la copypasta de hoy. Reddit no me dejó pasar.",
   guild_settings_persist_failed: "Hubo un error al guardar la configuración. Intenta de nuevo.",
   bot_voice_permission_not_enough: "No tengo permisos para unirme o hablar en ese canal de voz.",
   invalid_image_attachment: "Eso no es una imagen que yo pueda mirar. Solo acepto PNG, JPG o WEBP.",
