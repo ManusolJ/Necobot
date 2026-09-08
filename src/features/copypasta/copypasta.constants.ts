@@ -17,6 +17,4 @@ export const COPYPASTA_MIN_LENGTH = 100;
 
 export const COPYPASTA_MAX_LENGTH = 1_800;
 
-export const DISCORD_MAX_LENGTH = 2_000;
-
-export const RECENT_POSTS_MEMORY = 50;
+export const COPYPASTA_MEMORY_DAYS = 30;

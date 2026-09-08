@@ -71,6 +71,13 @@
       "when": 1788346867155,
       "tag": "0009_added_uwufied_column_to_user_table",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788908315236,
+      "tag": "0010_copypasta_posted_history",
+      "breakpoints": true
     }
   ]
 }

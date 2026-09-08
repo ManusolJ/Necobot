@@ -55,14 +55,19 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
       throw new CopypastaFetchError(COPYPASTA_SUBREDDIT);
     }
 
+    const post = pickCopypasta(posts);
+
+    if (!post) {
+      logger.warn(
+        { subreddit: COPYPASTA_SUBREDDIT },
+        "No copypasta was eligible; every candidate was too short or already posted",
+      );
+      return;
+    }
+
+    const content = formatCopypasta(post);
+
     for (const { guildId, channelId } of channels) {
-      const post = pickCopypasta(posts);
-
-      if (!post) {
-        logger.warn({ guildId }, "No copypasta passed the length filters; skipping this guild");
-        continue;
-      }
-
       const channel = await this.container.client.channels.fetch(channelId).catch(() => null);
 
       if (!channel?.isSendable()) {
@@ -70,7 +75,11 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
         continue;
       }
 
-      await channel.send(formatCopypasta(post));
+      try {
+        await channel.send({ content, allowedMentions: { parse: [] } });
+      } catch (error) {
+        logger.warn({ err: error, guildId, channelId }, "Could not send the copypasta; skipping this guild");
+      }
     }
   }
 }
