@@ -24,7 +24,7 @@ function toPosts(payload: RedditListingResponse): RedditPost[] {
   return children.flatMap((child) => {
     const post = child.data;
 
-    if (!post?.id || !post.title || post.stickied || post.over_18) {
+    if (!post?.id || !post.title || post.stickied) {
       return [];
     }
 
