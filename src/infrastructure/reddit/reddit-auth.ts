@@ -10,6 +10,7 @@ import {
   REDDIT_MEDIA_CODECS,
   ANDROID_APP_VERSIONS,
   REDDIT_TOKEN_LEEWAY_MS,
+  REDDIT_ERROR_BODY_LOG_LIMIT,
 } from "./reddit.constants.js";
 
 import { randomUUID } from "node:crypto";
@@ -66,14 +67,21 @@ async function mintSession(): Promise<RedditSession | undefined> {
     });
 
     if (!response.ok) {
-      logger.error({ status: response.status, body: await response.text() }, "Reddit token request failed");
+      const body = await response.text();
+      logger.error(
+        { status: response.status, body: body.slice(0, REDDIT_ERROR_BODY_LOG_LIMIT) },
+        "Reddit token request failed",
+      );
       return undefined;
     }
 
     const data = (await response.json()) as { access_token?: string; expires_in?: number };
 
     if (!data.access_token || typeof data.expires_in !== "number") {
-      logger.error({ data }, "Reddit token response was missing a token or an expiry");
+      logger.error(
+        { hasToken: Boolean(data.access_token), expiresInType: typeof data.expires_in },
+        "Reddit token response was missing a token or an expiry",
+      );
       return undefined;
     }
 

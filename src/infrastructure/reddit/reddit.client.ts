@@ -5,10 +5,18 @@ import type { RedditTimeframe } from "@shared/types/reddit-timeframe.type.js";
 import type { RedditListingResponse } from "@shared/types/reddit-listing-response.type.js";
 
 import { getSession, invalidateSession, buildAndroidHeaders } from "./reddit-auth.js";
-import { REDDIT_API_BASE, REDDIT_TIMEOUT_MS, REDDIT_CACHE_TTL_MS } from "./reddit.constants.js";
+import {
+  REDDIT_API_BASE,
+  REDDIT_TIMEOUT_MS,
+  REDDIT_CACHE_TTL_MS,
+  REDDIT_ERROR_BODY_LOG_LIMIT,
+} from "./reddit.constants.js";
 
-let lastGoodPosts: RedditPost[] | undefined;
-let lastGoodFetchedAt = 0;
+const lastGoodListings = new Map<string, { posts: RedditPost[]; fetchedAt: number }>();
+
+function listingKey(subreddit: string, timeframe: RedditTimeframe, limit: number): string {
+  return `${subreddit}:${timeframe}:${String(limit)}`;
+}
 
 function toPosts(payload: RedditListingResponse): RedditPost[] {
   const children = payload.data?.children ?? [];
@@ -16,7 +24,7 @@ function toPosts(payload: RedditListingResponse): RedditPost[] {
   return children.flatMap((child) => {
     const post = child.data;
 
-    if (!post?.id || !post.title || post.stickied) {
+    if (!post?.id || !post.title || post.stickied || post.over_18) {
       return [];
     }
 
@@ -25,7 +33,6 @@ function toPosts(payload: RedditListingResponse): RedditPost[] {
         id: post.id,
         title: post.title,
         selftext: post.selftext ?? "",
-        permalink: post.permalink ?? "",
       },
     ];
   });
@@ -58,8 +65,9 @@ async function requestListing(
     }
 
     if (!response.ok) {
+      const body = await response.text();
       logger.error(
-        { subreddit, status: response.status, body: await response.text() },
+        { subreddit, status: response.status, body: body.slice(0, REDDIT_ERROR_BODY_LOG_LIMIT) },
         "Reddit listing request failed",
       );
       return undefined;
@@ -84,21 +92,23 @@ export async function fetchTopPosts(
     result = await requestListing(subreddit, timeframe, limit);
   }
 
+  const key = listingKey(subreddit, timeframe, limit);
+
   if (result !== undefined && result !== "unauthorized" && result.length > 0) {
-    lastGoodPosts = result;
-    lastGoodFetchedAt = Date.now();
+    lastGoodListings.set(key, { posts: result, fetchedAt: Date.now() });
     return result;
   }
 
-  if (lastGoodPosts && Date.now() - lastGoodFetchedAt < REDDIT_CACHE_TTL_MS) {
+  const cached = lastGoodListings.get(key);
+
+  if (cached && Date.now() - cached.fetchedAt < REDDIT_CACHE_TTL_MS) {
     logger.warn({ subreddit }, "Reddit fetch failed; serving the last successful listing");
-    return lastGoodPosts;
+    return cached.posts;
   }
 
   return undefined;
 }
 
 export function clearPostCache(): void {
-  lastGoodPosts = undefined;
-  lastGoodFetchedAt = 0;
+  lastGoodListings.clear();
 }

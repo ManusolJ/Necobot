@@ -5,8 +5,8 @@ export interface RedditListingResponse {
         id?: string;
         title?: string;
         selftext?: string;
-        permalink?: string;
         stickied?: boolean;
+        over_18?: boolean;
       };
     }[];
   };

@@ -15,6 +15,8 @@ export const REDDIT_MEDIA_CODECS = "available-codecs=video/avc, video/hevc";
 
 export const REDDIT_TIMEOUT_MS = 10_000;
 
+export const REDDIT_ERROR_BODY_LOG_LIMIT = 500;
+
 export const REDDIT_TOKEN_LEEWAY_MS = 120_000;
 
 export const REDDIT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
