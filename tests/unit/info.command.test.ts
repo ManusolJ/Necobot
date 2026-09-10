@@ -1,7 +1,7 @@
 import { EMBED_COLOR, BOT_DISPLAY_NAME } from "@shared/consts/branding.constants.js";
 
+import { SPEAK_COST } from "@features/voice/voice.constants.js";
 import { MINE_COST } from "@features/minefield/minefield.constants.js";
-import { SPEAK_POINTS_COST } from "@features/voice/voice.constants.js";
 import { PUNISH_PERCENT } from "@features/moderation/moderation.constants.js";
 import { buildInfoEmbed } from "@features/information/commands/info.command.js";
 import { INFO_EMBED_TITLE, INFO_COMMAND_GROUPS } from "@features/information/information.constants.js";
@@ -104,8 +104,8 @@ describe("command catalogue content", () => {
   it("quotes the live point costs", () => {
     const byName = new Map(CATALOGUED.map((command) => [command.name, command.description]));
 
+    expect(byName.get("speak")).toContain(String(SPEAK_COST));
     expect(byName.get("minefield")).toContain(String(MINE_COST));
-    expect(byName.get("speak")).toContain(String(SPEAK_POINTS_COST));
     expect(byName.get("punish")).toContain(String(PUNISH_PERCENT * 100));
   });
 });
