@@ -195,22 +195,35 @@ describe("runBirthdaySweep", () => {
     expect(sentContents()[0]).toContain("<@user-1> y <@user-2>");
   });
 
-  it("marks each warned user after the message goes out", async () => {
+  it("claims each warning before the message goes out", async () => {
     birthdays([], [user({ userId: "user-1" }), user({ userId: "user-2" })]);
 
     await runBirthdaySweep(at("2026-03-15"));
 
     expect(claimBirthdayWarning).toHaveBeenCalledWith("guild-1", "user-1", 2026);
     expect(claimBirthdayWarning).toHaveBeenCalledWith("guild-1", "user-2", 2026);
+    expect(claimBirthdayWarning.mock.invocationCallOrder[0]).toBeLessThan(send.mock.invocationCallOrder[0] ?? 0);
   });
 
-  it("does not re-warn a user already warned for that birthday", async () => {
+  // The claim, not the snapshotted row, decides. Two overlapping sweeps both read
+  // birthdayWarnedYear as null, so only the atomic claim can break the tie.
+  it("stays silent when the warning was already claimed for that birthday", async () => {
+    claimBirthdayWarning.mockReturnValue(false);
     birthdays([], [user({ userId: "user-1", birthdayWarnedYear: 2026 })]);
 
     await runBirthdaySweep(at("2026-03-15"));
 
     expect(send).not.toHaveBeenCalled();
-    expect(claimBirthdayWarning).not.toHaveBeenCalled();
+  });
+
+  it("warns only the users whose claim actually succeeded", async () => {
+    claimBirthdayWarning.mockImplementation((_guild: string, userId: string) => userId === "user-2");
+    birthdays([], [user({ userId: "user-1" }), user({ userId: "user-2" })]);
+
+    await runBirthdaySweep(at("2026-03-15"));
+
+    expect(sentContents()[0]).toContain("<@user-2>");
+    expect(sentContents()[0]).not.toContain("<@user-1>");
   });
 
   // A warning sent in late December is for next year's birthday.

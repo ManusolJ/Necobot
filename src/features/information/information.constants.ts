@@ -1,8 +1,8 @@
 import type { CommandGroup } from "@shared/types/command-group.type.js";
 
 import { SLAP_COST } from "@features/slap/slap.constants.js";
-import { MINE_COST } from "@features/minefield/minefield.constants.js";
 import { SPEAK_COST } from "@features/voice/voice.constants.js";
+import { MINE_COST } from "@features/minefield/minefield.constants.js";
 import { PUNISH_PERCENT } from "@features/moderation/moderation.constants.js";
 import { UWUFY_COST, UWUFY_MESSAGE_COUNT } from "@features/uwufier/uwufier.constants.js";
 
@@ -59,7 +59,7 @@ export const INFO_COMMAND_GROUPS: readonly CommandGroup[] = [
       },
       {
         name: "birthday",
-        description: "Puede decirme tu cumpleaños y avisare a los demas cuando estemos cerca de la fecha",
+        description: "Dime tu cumpleaños y avisare cuando estemos cerca de la fecha",
       },
     ],
   },

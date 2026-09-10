@@ -7,6 +7,8 @@ export const BIRTHDAY_WARNING_MESSAGES: readonly string[] = [
 
 export const BIRTHDAY_GIFT_NOTE = "Ah, y toma {points} puntos. No digas que nunca te doy nada, nyaha~.";
 
+export const BIRTHDAY_MENTION_OVERFLOW = "... ¡y muchos cumpleaños más! Wow, hay un montón hoy~";
+
 export const BIRTHDAY_SAVED = "Anotado: **{date}**. Avisaré al servidor {days} días antes y otra vez el mismo día.";
 
 export const BIRTHDAY_SAVED_LEAP_NOTE =

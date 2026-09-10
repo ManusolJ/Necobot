@@ -12,13 +12,14 @@ import { daysInMonth, nowInBotZone } from "@shared/utils/calendar.util.js";
 
 import { buildCheerMessage } from "@features/cheer/cheer.service.js";
 
-import { BIRTHDAY_GIFT_NOTE, BIRTHDAY_WARNING_MESSAGES } from "./birthday.messages.js";
+import { BIRTHDAY_GIFT_NOTE, BIRTHDAY_MENTION_OVERFLOW, BIRTHDAY_WARNING_MESSAGES } from "./birthday.messages.js";
 import {
   LEAP_DAY,
   BIRTHDAY_PATTERN,
   LEAP_DAY_FALLBACK,
   BIRTHDAY_GIFT_POINTS,
   BIRTHDAY_WARNING_DAYS,
+  BIRTHDAY_MENTION_BUDGET,
   BIRTHDAY_LEAP_REFERENCE_YEAR,
 } from "./birthday.constants.js";
 
@@ -69,14 +70,45 @@ export function getBirthdayKeysForDate(date: DateTime): Birthday[] {
   return keys;
 }
 
-export function formatMentionList(userIds: readonly string[]): string {
+const MENTION_SEPARATOR = ", ";
+
+export function formatMentionList(userIds: readonly string[], budget = Number.POSITIVE_INFINITY): string {
   const mentions = userIds.map((userId) => `<@${userId}>`);
 
-  if (mentions.length <= 1) {
-    return mentions[0] ?? "";
+  if (mentions.length === 0) {
+    return "";
   }
 
-  return `${mentions.slice(0, -1).join(", ")} y ${String(mentions.at(-1))}`;
+  const full =
+    mentions.length === 1
+      ? String(mentions[0])
+      : `${mentions.slice(0, -1).join(MENTION_SEPARATOR)} y ${String(mentions.at(-1))}`;
+
+  if (full.length <= budget) {
+    return full;
+  }
+
+  const available = budget - BIRTHDAY_MENTION_OVERFLOW.length;
+
+  if (available <= 0) {
+    return full.slice(0, Math.max(0, budget));
+  }
+
+  const kept: string[] = [];
+  let length = 0;
+
+  for (const mention of mentions) {
+    const addition = kept.length === 0 ? mention.length : MENTION_SEPARATOR.length + mention.length;
+
+    if (length + addition > available) {
+      break;
+    }
+
+    kept.push(mention);
+    length += addition;
+  }
+
+  return `${kept.join(MENTION_SEPARATOR)}${BIRTHDAY_MENTION_OVERFLOW}`;
 }
 
 function groupByGuild(users: readonly GuildUser[]): Map<string, GuildUser[]> {
@@ -116,7 +148,12 @@ async function announceBirthdays(channel: SendableChannels, users: readonly Guil
     return;
   }
 
-  const message = buildCheerMessage(formatMentionList(claimed.map((user) => user.userId)));
+  const mentions = formatMentionList(
+    claimed.map((user) => user.userId),
+    BIRTHDAY_MENTION_BUDGET,
+  );
+
+  const message = buildCheerMessage(mentions);
   const note = formatMessage(BIRTHDAY_GIFT_NOTE, { points: String(BIRTHDAY_GIFT_POINTS) });
 
   await channel.send({ ...message, content: `${message.content}\n\n${note}` });
@@ -125,24 +162,21 @@ async function announceBirthdays(channel: SendableChannels, users: readonly Guil
 }
 
 async function announceUpcoming(channel: SendableChannels, users: readonly GuildUser[], year: number): Promise<void> {
-  const pending = users.filter((user) => user.birthdayWarnedYear !== year);
+  const claimed = users.filter((user) => claimBirthdayWarning(user.guildId, user.userId, year));
 
-  if (pending.length === 0) {
+  if (claimed.length === 0) {
     return;
   }
 
   const content = formatMessage(pickRandom(BIRTHDAY_WARNING_MESSAGES), {
     days: String(BIRTHDAY_WARNING_DAYS),
-    users: formatMentionList(pending.map((user) => user.userId)),
+    users: formatMentionList(
+      claimed.map((user) => user.userId),
+      BIRTHDAY_MENTION_BUDGET,
+    ),
   });
 
   await channel.send({ content });
-
-  for (const user of pending) {
-    claimBirthdayWarning(user.guildId, user.userId, year);
-  }
-
-  logger.info({ guildId: pending[0]?.guildId, users: pending.length, year }, "Warned about upcoming birthdays");
 }
 
 export async function runBirthdaySweep(now: DateTime = nowInBotZone()): Promise<void> {
