@@ -78,6 +78,13 @@
       "when": 1788908315236,
       "tag": "0010_copypasta_posted_history",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1789042092663,
+      "tag": "0011_add_birthday_to_user_table",
+      "breakpoints": true
     }
   ]
 }
