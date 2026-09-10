@@ -1,1 +1,1 @@
-export const SPEAK_POINTS_COST = 25;
+export const SPEAK_COST = 25;

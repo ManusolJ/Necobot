@@ -12,7 +12,7 @@ import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 import { getUserErrorMessage } from "@shared/utils/error-messages.util.js";
 import { botCanSpeakInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
-import { SPEAK_POINTS_COST } from "../voice.constants.js";
+import { SPEAK_COST } from "../voice.constants.js";
 import { playAudioInVoiceChannel } from "../voice-playback.util.js";
 import { AUDIO_CHOICES, resolveAudioPath } from "../audio-files.util.js";
 
@@ -34,7 +34,7 @@ export class SpeakCommand extends Command {
     registry.registerChatInputCommand((builder) =>
       builder
         .setName("speak")
-        .setDescription(`Me uno a tu canal de voz y digo una de mis frases (${SPEAK_POINTS_COST}pts).`)
+        .setDescription(`Me uno a tu canal de voz y digo una de mis frases (${SPEAK_COST}pts).`)
         .addStringOption((option) =>
           option
             .setName("audio")
@@ -72,10 +72,10 @@ export class SpeakCommand extends Command {
       throw new Error(`Audio file not in catalog: ${audioFile}`);
     }
 
-    const charged = subtractPointsFromUser(guildId, member.id, SPEAK_POINTS_COST);
+    const charged = subtractPointsFromUser(guildId, member.id, SPEAK_COST);
     if (!charged) {
       await interaction.reply(
-        `Huh?! ¿Quieres que diga algo? ¿Qué te parece esto?: "No tienes suficientes puntos para hacerme hablar, nyahaha!" Consigue **${SPEAK_POINTS_COST}** puntos y hablamos.`,
+        `Huh?! ¿Quieres que diga algo? ¿Qué te parece esto?: "No tienes suficientes puntos para hacerme hablar, nyahaha!" Consigue **${SPEAK_COST}** puntos y hablamos.`,
       );
       return;
     }
@@ -86,9 +86,9 @@ export class SpeakCommand extends Command {
       await playAudioInVoiceChannel(voiceChannel, audioPath);
     } catch (error) {
       logger.error({ err: error, guildId, audioFile }, "Failed to play audio in voice channel");
-      sumPointsToUser(guildId, member.id, SPEAK_POINTS_COST);
+      sumPointsToUser(guildId, member.id, SPEAK_COST);
       await interaction.editReply(
-        `${getUserErrorMessage("voice_connection_failed")} Te he devuelto los **${SPEAK_POINTS_COST}** puntos.`,
+        `${getUserErrorMessage("voice_connection_failed")} Te he devuelto los **${SPEAK_COST}** puntos.`,
       );
       return;
     }
@@ -96,7 +96,7 @@ export class SpeakCommand extends Command {
     const label = AUDIO_CHOICES.find((choice) => choice.value === audioFile)?.name ?? audioFile;
 
     await interaction.editReply(
-      `Reproduciendo **${label}** en <#${voiceChannel.id}>. Te ha costado **${SPEAK_POINTS_COST}** puntos; te quedan **${charged.points}**.`,
+      `Reproduciendo **${label}** en <#${voiceChannel.id}>. Te ha costado **${SPEAK_COST}** puntos; te quedan **${charged.points}**.`,
     );
   }
 }
