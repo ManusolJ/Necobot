@@ -9,3 +9,11 @@ export function isSameCalendarDay(a: Date, b: Date): boolean {
 export function isFriday(now: Date = new Date()): boolean {
   return DateTime.fromJSDate(now, { zone: BOT_TIMEZONE }).weekday === 5;
 }
+
+export function nowInBotZone(): DateTime {
+  return DateTime.now().setZone(BOT_TIMEZONE);
+}
+
+export function daysInMonth(month: number, year: number): number {
+  return DateTime.fromObject({ year, month, day: 1 }, { zone: BOT_TIMEZONE }).daysInMonth ?? 0;
+}
