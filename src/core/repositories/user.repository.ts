@@ -1,11 +1,12 @@
 import { db } from "@infrastructure/database/client.js";
 import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
 
+import type { Birthday } from "@shared/types/birthday.type.js";
 import type { GuildUser } from "@shared/types/guild-user.type.js";
 import type { GuildUserInsert } from "@shared/types/guild-user-insert.type.js";
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
-import { and, eq, gt, gte, sql } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, ne, or, sql } from "drizzle-orm";
 
 export function findGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return db
@@ -122,6 +123,73 @@ export function consumeGuildUserUwufication(guildId: string, userId: string): Gu
     .update(guildUsers)
     .set({ isUwufied: sql`${guildUsers.isUwufied} - 1` })
     .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId), gt(guildUsers.isUwufied, 0)))
+    .returning()
+    .get();
+}
+
+export function setGuildUserBirthday(guildId: string, userId: string, birthday: Birthday): GuildUser | undefined {
+  const updated = db
+    .insert(guildUsers)
+    .values({ guildId, userId, birthdayDay: birthday.day, birthdayMonth: birthday.month })
+    .onConflictDoUpdate({
+      target: [guildUsers.guildId, guildUsers.userId],
+      set: { birthdayDay: birthday.day, birthdayMonth: birthday.month },
+    })
+    .returning();
+
+  return updated.get();
+}
+
+export function findGuildUsersByBirthday(keys: readonly Birthday[]): GuildUser[] {
+  if (keys.length === 0) {
+    return [];
+  }
+
+  const matches = keys.map((key) => and(eq(guildUsers.birthdayDay, key.day), eq(guildUsers.birthdayMonth, key.month)));
+
+  return db
+    .select()
+    .from(guildUsers)
+    .where(and(or(...matches), isNull(guildUsers.excludedAt)))
+    .all();
+}
+
+export function claimGuildUserBirthdayGift(
+  guildId: string,
+  userId: string,
+  year: number,
+  points: number,
+): GuildUser | undefined {
+  return db
+    .update(guildUsers)
+    .set({
+      points: sql`${guildUsers.points} + ${points}`,
+      historicalPoints: sql`${guildUsers.historicalPoints} + ${points}`,
+      birthdayCheeredYear: year,
+    })
+    .where(
+      and(
+        eq(guildUsers.guildId, guildId),
+        eq(guildUsers.userId, userId),
+        or(isNull(guildUsers.birthdayCheeredYear), ne(guildUsers.birthdayCheeredYear, year)),
+      ),
+    )
+    .returning()
+    .get();
+}
+
+/** Same guard as the gift, for the advance warning. The year is the birthday's, not today's. */
+export function claimGuildUserBirthdayWarning(guildId: string, userId: string, year: number): GuildUser | undefined {
+  return db
+    .update(guildUsers)
+    .set({ birthdayWarnedYear: year })
+    .where(
+      and(
+        eq(guildUsers.guildId, guildId),
+        eq(guildUsers.userId, userId),
+        or(isNull(guildUsers.birthdayWarnedYear), ne(guildUsers.birthdayWarnedYear, year)),
+      ),
+    )
     .returning()
     .get();
 }

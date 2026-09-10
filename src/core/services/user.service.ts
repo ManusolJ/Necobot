@@ -5,12 +5,17 @@ import {
   recordBegAttempt,
   applyGuildUserDelta,
   recordMonsterDrink,
+  setGuildUserBirthday,
   deductGuildUserPoints,
   setGuildUserExclusion,
+  findGuildUsersByBirthday,
   setGuildUserUwufication,
+  claimGuildUserBirthdayGift,
   consumeGuildUserUwufication,
+  claimGuildUserBirthdayWarning,
 } from "@core/repositories/user.repository.js";
 
+import type { Birthday } from "@shared/types/birthday.type.js";
 import type { GuildUser } from "@shared/types/guild-user.type.js";
 
 export function getGuildUser(guildId: string, userId: string): GuildUser | undefined {
@@ -47,6 +52,28 @@ export function setUserUwufication(guildId: string, userId: string, numberOfMess
 
 export function consumeUwufiedMessage(guildId: string, userId: string): boolean {
   return consumeGuildUserUwufication(guildId, userId) !== undefined;
+}
+
+export function setUserBirthday(guildId: string, userId: string, birthday: Birthday): GuildUser {
+  const result = setGuildUserBirthday(guildId, userId, birthday);
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+export function getUsersWithBirthday(keys: readonly Birthday[]): GuildUser[] {
+  return findGuildUsersByBirthday(keys);
+}
+
+export function claimBirthdayGift(guildId: string, userId: string, year: number, points: number): boolean {
+  return claimGuildUserBirthdayGift(guildId, userId, year, points) !== undefined;
+}
+
+export function claimBirthdayWarning(guildId: string, userId: string, year: number): boolean {
+  return claimGuildUserBirthdayWarning(guildId, userId, year) !== undefined;
 }
 
 export function recordMineHit(guildId: string, userId: string, pointPenalty: number): GuildUser {
