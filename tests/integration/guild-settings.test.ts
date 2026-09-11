@@ -1,9 +1,11 @@
 import {
-  completeGuildSetup,
-  getGuildSettings,
   armMines,
   restoreMine,
   tryConsumeMine,
+  getGuildChannel,
+  getGuildSettings,
+  completeGuildSetup,
+  registerGuildChannel,
 } from "@core/services/guild.service.js";
 
 import { resetDatabase, useMigratedDatabase } from "../helpers/database.js";
@@ -81,5 +83,35 @@ describe("mine accounting", () => {
     restoreMine(GUILD);
 
     expect(getGuildSettings(GUILD)?.activeMines).toBe(1);
+  });
+});
+
+describe("guild channels", () => {
+  beforeEach(() => {
+    completeGuildSetup({ guildId: GUILD, mainChannelId: "chan-a" });
+  });
+
+  it("stores and reads back a channel by purpose", () => {
+    registerGuildChannel({ guildId: GUILD, purpose: "archive", channelId: "chan-z" });
+
+    expect(getGuildChannel(GUILD, "archive")?.channelId).toBe("chan-z");
+  });
+
+  it("returns undefined for a purpose the guild never registered", () => {
+    expect(getGuildChannel(GUILD, "archive")).toBeUndefined();
+  });
+
+  it("replaces the channel when the same purpose is registered again", () => {
+    registerGuildChannel({ guildId: GUILD, purpose: "archive", channelId: "chan-y" });
+    registerGuildChannel({ guildId: GUILD, purpose: "archive", channelId: "chan-z" });
+
+    expect(getGuildChannel(GUILD, "archive")?.channelId).toBe("chan-z");
+  });
+
+  it("does not leak channels across guilds", () => {
+    completeGuildSetup({ guildId: "guild-2", mainChannelId: "chan-b" });
+    registerGuildChannel({ guildId: "guild-2", purpose: "archive", channelId: "chan-other" });
+
+    expect(getGuildChannel(GUILD, "archive")).toBeUndefined();
   });
 });

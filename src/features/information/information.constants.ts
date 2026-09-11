@@ -3,8 +3,8 @@ import type { CommandGroup } from "@shared/types/command-group.type.js";
 import { SLAP_COST } from "@features/slap/slap.constants.js";
 import { SPEAK_COST } from "@features/voice/voice.constants.js";
 import { MINE_COST } from "@features/minefield/minefield.constants.js";
-import { PUNISH_PERCENT } from "@features/moderation/moderation.constants.js";
 import { UWUFY_COST, UWUFY_MESSAGE_COUNT } from "@features/uwufier/uwufier.constants.js";
+import { PUNISH_PERCENT, CLEANUP_MESSAGE_COUNT } from "@features/moderation/moderation.constants.js";
 
 export const INFO_EMBED_TITLE = "Mis comandos";
 
@@ -116,6 +116,10 @@ export const INFO_COMMAND_GROUPS: readonly CommandGroup[] = [
       {
         name: "punish",
         description: `Confisca el ${String(PUNISH_PERCENT * 100)}% de los puntos de quien elijas.`,
+      },
+      {
+        name: "clean",
+        description: `Borra y archiva los últimos mensajes de un canal (${String(CLEANUP_MESSAGE_COUNT)} por defecto).`,
       },
     ],
   },

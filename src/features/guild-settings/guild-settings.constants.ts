@@ -10,4 +10,5 @@ export const CHANNEL_PURPOSES = [
   { name: "Canal de Memes", value: "memes" },
   { name: "Canal de Copypastas", value: "copypasta" },
   { name: "Canal de Anuncios", value: "announcements" },
+  { name: "Canal de Archivo", value: "archive" },
 ];

@@ -1,8 +1,6 @@
 const USER_MESSAGES: Record<string, string> = {
   guild_member_not_found: "No encontré tu/este usuario en el servidor.",
   target_excluded: "Este usuario esta excluido de las actividades del bot.",
-  target_is_bot: "Los bots no sentimos nada, nyaha~. Busca a alguien de carne y hueso.",
-  target_is_self: "Hacerte eso a ti mismo no tiene ninguna gracia. Elige a otra victima.",
   image_too_large: "Esa imagen pesa demasiado para mis ojos divinos. Máximo 8 MB.",
   bot_permission_not_verified: "No pude verificar mis permisos en este servidor.",
   user_not_in_voice: "Tienes que estar en un canal de voz para usar este comando.",
@@ -12,9 +10,13 @@ const USER_MESSAGES: Record<string, string> = {
   guild_user_persist_failed: "Hubo un error al guardar tus datos. Intenta de nuevo.",
   guild_channel_persist_failed: "Hubo un error al guardar el canal. Intenta de nuevo.",
   copypasta_fetch_failed: "No pude traer la copypasta de hoy. Reddit no me dejó pasar.",
+  target_is_bot: "Los bots no sentimos nada, nyaha~. Busca a alguien de carne y hueso.",
+  target_is_self: "Hacerte eso a ti mismo no tiene ninguna gracia. Elige a otra victima.",
+  bot_cannot_clean_channel: "No tengo permisos para leer o borrar mensajes en ese canal.",
   guild_settings_persist_failed: "Hubo un error al guardar la configuración. Intenta de nuevo.",
   bot_voice_permission_not_enough: "No tengo permisos para unirme o hablar en ese canal de voz.",
   invalid_image_attachment: "Eso no es una imagen que yo pueda mirar. Solo acepto PNG, JPG o WEBP.",
+  archive_channel_unavailable: "El canal de archivo no está disponible o no puedo crear hilos en él.",
   guild_not_configured: "Un administrador debe usar el comando `/settings` antes de poder usar esta interacción.",
   user_excluded: "Estás excluido de las actividades del bot, nyaha~. Habla con un admin si crees que es un error.",
 };

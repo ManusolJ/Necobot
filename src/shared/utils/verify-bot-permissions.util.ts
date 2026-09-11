@@ -24,6 +24,31 @@ export function botCanRewriteMessages(bot: GuildMember | undefined, channel: Tex
     .has([PermissionFlagsBits.ManageMessages, PermissionFlagsBits.ManageWebhooks, PermissionFlagsBits.SendMessages]);
 }
 
+export function botCanCleanChannel(bot: GuildMember | undefined, channel: TextChannel): boolean {
+  if (!bot) {
+    return false;
+  }
+
+  return channel
+    .permissionsFor(bot)
+    .has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageMessages]);
+}
+
+export function botCanArchiveInChannel(bot: GuildMember | undefined, channel: TextChannel): boolean {
+  if (!bot) {
+    return false;
+  }
+
+  return channel
+    .permissionsFor(bot)
+    .has([
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.SendMessages,
+      PermissionFlagsBits.CreatePublicThreads,
+      PermissionFlagsBits.SendMessagesInThreads,
+    ]);
+}
+
 export function botCanSpeakInChannel(bot: GuildMember | undefined, channel: VoiceBasedChannel): boolean {
   if (!bot) {
     return false;

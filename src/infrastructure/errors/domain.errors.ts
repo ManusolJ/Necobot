@@ -30,6 +30,18 @@ export class BotPermissionNotEnough extends AppError {
   }
 }
 
+export class BotCannotCleanChannel extends AppError {
+  public constructor(channelId: string) {
+    super("bot_cannot_clean_channel", { context: { channelId } });
+  }
+}
+
+export class ArchiveChannelUnavailable extends AppError {
+  public constructor(guildId: string, channelId: string) {
+    super("archive_channel_unavailable", { context: { guildId, channelId } });
+  }
+}
+
 export class GuildChannelPersistError extends AppError {
   public constructor(guildId: string, purpose: string, cause?: unknown) {
     super("guild_channel_persist_failed", { context: { guildId, purpose }, cause });

@@ -7,6 +7,7 @@ import type { GuildSettingsInsert } from "@shared/types/guild-settings-insert.ty
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const consumeGuildMine = vi.hoisted(() => vi.fn());
+const findGuildChannel = vi.hoisted(() => vi.fn());
 const findGuildSettings = vi.hoisted(() => vi.fn());
 const upsertGuildChannel = vi.hoisted(() => vi.fn());
 const incrementGuildMines = vi.hoisted(() => vi.fn());
@@ -14,14 +15,22 @@ const upsertGuildSettings = vi.hoisted(() => vi.fn());
 
 vi.mock("@core/repositories/guild.repository.js", () => ({
   consumeGuildMine,
+  findGuildChannel,
   findGuildSettings,
   upsertGuildChannel,
   incrementGuildMines,
   upsertGuildSettings,
 }));
 
-const { armMines, restoreMine, tryConsumeMine, getGuildSettings, completeGuildSetup, registerGuildChannel } =
-  await import("@core/services/guild.service.js");
+const {
+  armMines,
+  restoreMine,
+  tryConsumeMine,
+  getGuildChannel,
+  getGuildSettings,
+  completeGuildSetup,
+  registerGuildChannel,
+} = await import("@core/services/guild.service.js");
 
 const GUILD = "guild-1";
 
@@ -47,6 +56,7 @@ function valuesOf(call = 0): GuildSettingsInsert {
 
 beforeEach(() => {
   consumeGuildMine.mockReset();
+  findGuildChannel.mockReset();
   findGuildSettings.mockReset();
   upsertGuildChannel.mockReset();
   incrementGuildMines.mockReset();
@@ -163,6 +173,24 @@ describe("registerGuildChannel", () => {
     expect(() => registerGuildChannel({ guildId: GUILD, purpose: "logs", channelId: "chan-b" })).toThrow(
       expect.objectContaining({ context: { guildId: GUILD, purpose: "logs" } }),
     );
+  });
+});
+
+describe("getGuildChannel", () => {
+  // Normal case: the lookup is a straight read-through keyed by guild and purpose.
+  it("returns the stored channel for the guild and purpose", () => {
+    const row: GuildChannel = { guildId: GUILD, purpose: "archive", channelId: "chan-c" };
+    findGuildChannel.mockReturnValue(row);
+
+    expect(getGuildChannel(GUILD, "archive")).toBe(row);
+    expect(findGuildChannel).toHaveBeenCalledWith(GUILD, "archive");
+  });
+
+  // Edge case: an unset purpose yields undefined, which callers use to switch to a fallback flow.
+  it("returns undefined when the guild has no channel for that purpose", () => {
+    findGuildChannel.mockReturnValue(undefined);
+
+    expect(getGuildChannel(GUILD, "archive")).toBeUndefined();
   });
 });
 
