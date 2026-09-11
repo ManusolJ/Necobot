@@ -3,6 +3,7 @@ import {
   BotCannotCleanChannel,
   ArchiveChannelUnavailable,
   BotPermissionsNotVerified,
+  CleanStartMessageNotFound,
 } from "@infrastructure/errors/domain.errors.js";
 
 import { getGuildChannel } from "@core/services/guild.service.js";
@@ -20,6 +21,7 @@ import {
   buildArchiveThreadName,
 } from "../moderation.service.js";
 import {
+  MESSAGE_ID_PATTERN,
   CLEANUP_MAX_MESSAGES,
   CLEANUP_MESSAGE_COUNT,
   ARCHIVE_CHANNEL_PURPOSE,
@@ -90,6 +92,12 @@ export class CleanCommand extends Command {
             .setMinValue(1)
             .setMaxValue(CLEANUP_MAX_MESSAGES),
         )
+        .addStringOption((option) =>
+          option
+            .setName("from")
+            .setDescription("ID del mensaje por el que empezar (incluido), hacia los más nuevos. Si no, los últimos")
+            .setRequired(false),
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
     );
   }
@@ -98,6 +106,11 @@ export class CleanCommand extends Command {
     const { guildId, member } = requireGuildMember(interaction);
     const channel = interaction.options.getChannel("channel", true, [ChannelType.GuildText]);
     const amount = interaction.options.getInteger("amount", false) ?? CLEANUP_MESSAGE_COUNT;
+    const fromId = interaction.options.getString("from", false)?.trim() ?? null;
+
+    if (fromId !== null && !MESSAGE_ID_PATTERN.test(fromId)) {
+      throw new CleanStartMessageNotFound(channel.id, fromId);
+    }
 
     const bot = await interaction.guild?.members.fetchMe();
 
@@ -113,8 +126,8 @@ export class CleanCommand extends Command {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const fetched = await channel.messages.fetch({ limit: amount });
-    const messages = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    const fetched = await this.fetchTargets(channel, amount, fromId);
+    const messages = fetched.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
     if (messages.length === 0) {
       await interaction.editReply(formatMessage(CLEAN_NO_MESSAGES, { channel: `<#${channel.id}>` }));
@@ -130,6 +143,26 @@ export class CleanCommand extends Command {
     }
 
     await this.cleanWithConfirmation(interaction, channel, messages);
+  }
+
+  private async fetchTargets(channel: TextChannel, amount: number, fromId: string | null): Promise<Message[]> {
+    if (fromId === null) {
+      const latest = await channel.messages.fetch({ limit: amount });
+      return [...latest.values()];
+    }
+
+    const start = await channel.messages.fetch(fromId).catch(() => null);
+
+    if (!start) {
+      throw new CleanStartMessageNotFound(channel.id, fromId);
+    }
+
+    if (amount === 1) {
+      return [start];
+    }
+
+    const newer = await channel.messages.fetch({ after: fromId, limit: amount - 1 });
+    return [start, ...newer.values()];
   }
 
   private async resolveArchiveChannel(guildId: string, bot: GuildMember): Promise<TextChannel | undefined> {

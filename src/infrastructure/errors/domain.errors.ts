@@ -36,6 +36,12 @@ export class BotCannotCleanChannel extends AppError {
   }
 }
 
+export class CleanStartMessageNotFound extends AppError {
+  public constructor(channelId: string, messageId: string) {
+    super("clean_start_message_not_found", { context: { channelId, messageId } });
+  }
+}
+
 export class ArchiveChannelUnavailable extends AppError {
   public constructor(guildId: string, channelId: string) {
     super("archive_channel_unavailable", { context: { guildId, channelId } });

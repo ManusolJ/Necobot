@@ -13,6 +13,7 @@ const USER_MESSAGES: Record<string, string> = {
   target_is_bot: "Los bots no sentimos nada, nyaha~. Busca a alguien de carne y hueso.",
   target_is_self: "Hacerte eso a ti mismo no tiene ninguna gracia. Elige a otra victima.",
   bot_cannot_clean_channel: "No tengo permisos para leer o borrar mensajes en ese canal.",
+  clean_start_message_not_found: "No encontré ese mensaje en ese canal. Revisa el ID, nyaha~.",
   guild_settings_persist_failed: "Hubo un error al guardar la configuración. Intenta de nuevo.",
   bot_voice_permission_not_enough: "No tengo permisos para unirme o hablar en ese canal de voz.",
   invalid_image_attachment: "Eso no es una imagen que yo pueda mirar. Solo acepto PNG, JPG o WEBP.",
