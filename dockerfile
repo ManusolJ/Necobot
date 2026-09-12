@@ -1,7 +1,7 @@
 FROM node:22.16.0-bookworm-slim AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY tsconfig.json ./
@@ -17,7 +17,7 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
