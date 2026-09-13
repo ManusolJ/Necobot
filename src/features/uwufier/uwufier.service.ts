@@ -1,84 +1,68 @@
-import { logger } from "@infrastructure/config/logger.config.js";
+import { Segment } from "@shared/types/uwu-segment.type.js";
+import { UWUFY_WORDS_CHANCE, UWUFY_SPACES_CHANCE, UWUFY_EXCLAMATIONS_CHANCE } from "./uwufier.constants.js";
 
-import { PROVIDER, UWUFIER_URL, UWUFY_TIMEOUT_MS } from "./uwufier.constants.js";
+import Uwuifier from "uwuifier";
 
 const PRESERVED_PATTERN =
   /```[\s\S]*?```|`[^`\n]*`|https?:\/\/\S+|<a?:\w+:\d+>|<\/[\w -]+:\d+>|<t:\d+(?::[tTdDfFR])?>|<@[!&]?\d+>|<#\d+>/gu;
 
-const PLACEHOLDER_PATTERN = /\{\{\d+\}\}/gu;
+const PADDING_PATTERN = /^(\s*)([\s\S]*?)(\s*)$/u;
 
-function placeholderFor(index: number): string {
-  return `{{${String(index)}}}`;
-}
+const uwuifier = new Uwuifier({
+  words: UWUFY_WORDS_CHANCE,
+  spaces: UWUFY_SPACES_CHANCE,
+  exclamations: UWUFY_EXCLAMATIONS_CHANCE,
+});
 
-function maskPreserved(text: string): { masked: string; tokens: string[] } {
-  const tokens: string[] = [];
+export function splitPreserved(text: string): Segment[] {
+  let cursor = 0;
+  const segments: Segment[] = [];
 
-  const masked = text.replace(PRESERVED_PATTERN, (match) => {
-    tokens.push(match);
-    return placeholderFor(tokens.length - 1);
-  });
+  for (const match of text.matchAll(PRESERVED_PATTERN)) {
+    const start = match.index;
 
-  return { masked, tokens };
-}
-
-function restorePreserved(text: string, tokens: readonly string[]): string | undefined {
-  let result = text;
-
-  for (const [index, token] of tokens.entries()) {
-    const placeholder = placeholderFor(index);
-
-    if (!result.includes(placeholder)) {
-      logger.error({ placeholder }, "Uwufier dropped a preserved span; leaving the message alone");
-      return undefined;
+    if (start > cursor) {
+      segments.push({ text: text.slice(cursor, start), preserved: false });
     }
 
-    result = result.replace(placeholder, () => token);
+    segments.push({ text: match[0], preserved: true });
+    cursor = start + match[0].length;
   }
 
-  return result;
-}
-
-function hasRewritableText(masked: string): boolean {
-  return /\p{L}/u.test(masked.replace(PLACEHOLDER_PATTERN, ""));
-}
-
-async function requestUwu(text: string): Promise<string | undefined> {
-  try {
-    const response = await fetch(UWUFIER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider: PROVIDER, text }),
-      signal: AbortSignal.timeout(UWUFY_TIMEOUT_MS),
-    });
-
-    if (!response.ok) {
-      logger.error({ status: response.status }, "Uwufier request failed");
-      return undefined;
-    }
-
-    const data = (await response.json()) as { uwu?: string };
-    const uwu = data.uwu?.trim();
-
-    return uwu === undefined || uwu === "" ? undefined : uwu;
-  } catch (error) {
-    logger.error({ err: error }, "Uwufier request errored");
-    return undefined;
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), preserved: false });
   }
+
+  return segments;
 }
 
-export async function uwuifyText(text: string): Promise<string | undefined> {
-  const { masked, tokens } = maskPreserved(text);
+function hasRewritableText(segments: readonly Segment[]): boolean {
+  return segments.some((segment) => !segment.preserved && /\p{L}/u.test(segment.text));
+}
 
-  if (!hasRewritableText(masked)) {
+function uwuifyProse(text: string): string {
+  const match = PADDING_PATTERN.exec(text);
+
+  if (!match) {
+    return text;
+  }
+
+  const [, leading = "", body = "", trailing = ""] = match;
+
+  return body.length === 0 ? text : `${leading}${uwuifier.uwuifySentence(body)}${trailing}`;
+}
+
+export function uwuifyText(text: string): string | undefined {
+  const segments = splitPreserved(text);
+
+  if (!hasRewritableText(segments)) {
     return undefined;
   }
 
-  const rewritten = await requestUwu(masked);
+  const rewritten = segments
+    .map((segment) => (segment.preserved ? segment.text : uwuifyProse(segment.text)))
+    .join("")
+    .trim();
 
-  if (rewritten === undefined) {
-    return undefined;
-  }
-
-  return restorePreserved(rewritten, tokens);
+  return rewritten.length === 0 ? undefined : rewritten;
 }

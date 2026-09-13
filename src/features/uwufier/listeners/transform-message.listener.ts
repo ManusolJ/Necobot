@@ -1,6 +1,11 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 
-import { consumeUwufiedMessage, isUserExcluded, isUserUwufied } from "@core/services/user.service.js";
+import {
+  isUserExcluded,
+  isUserUwufied,
+  consumeUwufiedMessage,
+  restoreUwufiedMessage,
+} from "@core/services/user.service.js";
 
 import { BOT_DISPLAY_NAME } from "@shared/consts/branding.constants.js";
 import { botCanRewriteMessages } from "@shared/utils/verify-bot-permissions.util.js";
@@ -14,6 +19,8 @@ import { ChannelType } from "discord.js";
 import { Events, Listener } from "@sapphire/framework";
 
 export class TransformMessageListener extends Listener<typeof Events.MessageCreate> {
+  private readonly webhooks = new WeakMap<TextChannel, Webhook>();
+
   public constructor(context: Listener.LoaderContext, options: Listener.Options) {
     super(context, { ...options, event: Events.MessageCreate });
   }
@@ -43,14 +50,18 @@ export class TransformMessageListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
-    const uwu = await uwuifyText(message.content);
+    const uwu = uwuifyText(message.content);
 
     if (uwu === undefined || uwu.length > UWUFY_MAX_OUTPUT_LENGTH) {
       return;
     }
 
-    if (await this.rewrite(message, message.channel, uwu)) {
-      consumeUwufiedMessage(message.guildId, message.author.id);
+    if (!consumeUwufiedMessage(message.guildId, message.author.id)) {
+      return;
+    }
+
+    if (!(await this.rewrite(message, message.channel, uwu))) {
+      restoreUwufiedMessage(message.guildId, message.author.id);
     }
   }
 
@@ -69,6 +80,8 @@ export class TransformMessageListener extends Listener<typeof Events.MessageCrea
 
       return true;
     } catch (error) {
+      this.webhooks.delete(channel);
+
       logger.error(
         { err: error, guildId: message.guildId, channelId: channel.id, messageId: message.id },
         "Failed to rewrite a message through the webhook",
@@ -79,9 +92,18 @@ export class TransformMessageListener extends Listener<typeof Events.MessageCrea
   }
 
   private async resolveWebhook(channel: TextChannel): Promise<Webhook> {
+    const cached = this.webhooks.get(channel);
+
+    if (cached) {
+      return cached;
+    }
+
     const existing = await channel.fetchWebhooks();
     const owned = existing.find((hook) => hook.owner?.id === channel.client.user.id && hook.token !== null);
+    const webhook = owned ?? (await channel.createWebhook({ name: BOT_DISPLAY_NAME }));
 
-    return owned ?? (await channel.createWebhook({ name: BOT_DISPLAY_NAME }));
+    this.webhooks.set(channel, webhook);
+
+    return webhook;
   }
 }
