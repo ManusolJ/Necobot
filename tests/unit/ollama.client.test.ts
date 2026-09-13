@@ -1,5 +1,5 @@
-import { AI_MODEL_NAME } from "@infrastructure/ai/ollama.constants.js";
 import { requestChatCompletion } from "@infrastructure/ai/ollama.client.js";
+import { AI_MODEL_NAME, AI_KEEP_ALIVE, AI_MAX_REPLY_TOKENS } from "@infrastructure/ai/ollama.constants.js";
 
 import type { ChatMessage } from "@shared/types/chat-message.type.js";
 
@@ -44,8 +44,27 @@ describe("requestChatCompletion", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, { method: string; body: string; signal: AbortSignal }];
     expect(url).toMatch(/\/api\/chat$/u);
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ model: AI_MODEL_NAME, messages: MESSAGES, stream: false });
+    expect(JSON.parse(init.body)).toEqual(
+      expect.objectContaining({ model: AI_MODEL_NAME, messages: MESSAGES, stream: false }),
+    );
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  // Safety: thinking-capable bases think by default when the field is absent, and the reply must stay bounded
+  // no matter what the Modelfile inherits from its base.
+  it("disables thinking, caps the reply length and keeps the model loaded", async () => {
+    fetchMock.mockResolvedValue(okResponse("nyaha"));
+
+    await requestChatCompletion(MESSAGES);
+
+    const [, init] = fetchMock.mock.calls[0] as [string, { body: string }];
+    expect(JSON.parse(init.body)).toEqual(
+      expect.objectContaining({
+        think: false,
+        keep_alive: AI_KEEP_ALIVE,
+        options: { num_predict: AI_MAX_REPLY_TOKENS },
+      }),
+    );
   });
 
   // Normal case: reasoning models emit a <think> block that must never reach Discord.
