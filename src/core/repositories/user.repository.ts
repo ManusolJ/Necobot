@@ -4,12 +4,12 @@ import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
 import type { Birthday } from "@shared/types/birthday.type.js";
 import type { GuildUser } from "@shared/types/guild-user.type.js";
 import type { GuildUserInsert } from "@shared/types/guild-user-insert.type.js";
+import type { DailyStampColumn } from "@shared/types/daily-stamp-column.type.js";
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
 import type { SQL } from "drizzle-orm";
 
 import { and, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
-import { DailyStampColumn } from "@shared/types/daily-stamp-column.type.js";
 
 export function findGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return db
@@ -190,7 +190,6 @@ export function claimGuildUserBirthdayGift(
     .get();
 }
 
-/** Same guard as the gift, for the advance warning. The year is the birthday's, not today's. */
 export function claimGuildUserBirthdayWarning(guildId: string, userId: string, year: number): GuildUser | undefined {
   return db
     .update(guildUsers)
