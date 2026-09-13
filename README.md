@@ -22,7 +22,7 @@ It runs continuously on a private server and it's my testbed for whatever I want
 [![Last commit](https://img.shields.io/github/last-commit/ManusolJ/Necobot?style=for-the-badge)](https://github.com/ManusolJ/Necobot/commits)
 
 <a href="#what-it-does">What it does</a> ·
-<a href="#technical-notes">Technical notes</a> ·
+<a href="#how-it-works">How it works</a> ·
 <a href="#tech-stack">Tech stack</a> ·
 <a href="#running-it">Running it</a> ·
 <a href="#status-and-roadmap">Roadmap</a>
@@ -31,155 +31,151 @@ It runs continuously on a private server and it's my testbed for whatever I want
 
 ---
 
-Two things at once: it's a working bot with points economy, minigames, an LLM-backed
-conversational layer and a testbed for technologies I want to try. When I want to
-learn something new, I usually implement it here first.
+Two things at once: a working bot with a points economy, minigames and an LLM-backed
+conversational layer, and a testbed for technologies I want to try. When I want to learn
+something new, I usually implement it here first.
 
 ---
 
 ## What it does
 
-Everything the bot offers hangs off a **points economy**. Points are earned,
-spent, wagered, gifted and confiscated, so the features interlock rather than sitting
-next to each other as unrelated toys.
+Everything hangs off a **points economy**. Points are earned, spent, wagered, gifted,
+confiscated and occasionally lost to bad luck, so the features interlock instead of
+sitting next to each other as unrelated toys. Penalties can push a balance below zero,
+and debt has to be earned back before spending again.
 
-### Earning and holding
+- **Earning** - begging (with a daily cooldown and a chance to fail), birthday gifts and much more. Every grant from
+  the bot is tracked as a lifetime total on the user's profile.
+- **Spending** - planting mines in the main channel, making the bot join a voice
+  channel and play a clip, slapping people, and putting someone's next few messages
+  through an uwufier.
+- **Wagering** - rock-paper-scissors duels against another member for a stake, or
+  against the bot for a token prize.
+- **Image recognition** - show the bot a picture and it says what it sees, using a
+  local zero-shot classifier.
+- **In-character chat** - mention the bot and a locally hosted model answers as the
+  character, with a short per-channel memory.
+- **Scheduled** - reminders, birthday announcements a week ahead and on the day, and a
+  daily copypasta pulled from Reddit into a dedicated channel.
+- **Moderation and admin** - opting users out of everything, confiscating points,
+  bulk-deleting messages with an archive copy in a thread, per-guild settings for the
+  main channel and purpose-specific channels, and an owner-only command to inspect and
+  repair the slash-command registration.
 
-| Command   | Behaviour                                                                                                                                                      |
-| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `beg`     | Grants a random amount of points, with a chance to fail outright. Users holding a specific role get one automatic second attempt. Always answers in character. |
-| `balance` | Current point total.                                                                                                                                           |
-| `profile` | Full user card: points plus tracked stats - times begged, mines stepped on, and so on.                                                                         |
-| `gift`    | Transfer points to another user.                                                                                                                               |
-
-### Spending
-
-| Command     | Cost      | Behaviour                                                                                                                                                                                        |
-| :---------- | :-------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `minefield` | 20 / mine | Plants mines in a text channel. Every message sent there afterwards has a 2% chance of detonating one: a 30-second timeout for regular users, or −50 points for admins, who cannot be timed out. |
-| `speak`     | 45        | Joins the caller's voice channel and plays a sound.                                                                                                                                              |
-| `duel`      | wagered   | Challenge another user, winner takes the stake. [Detailed below.](#the-duel-is-a-multi-step-stateful-interaction)                                                                                |
-
-### Utilities
-
-| Command    | Behaviour                                                                               |
-| :--------- | :-------------------------------------------------------------------------------------- |
-| `reminder` | Schedules a reminder for X minutes, hours or days out, with an optional custom message. |
-| `roll`     | Standard `XdY` dice roll.                                                               |
-| `cheer`    | Sends a birthday message and image to a chosen user.                                    |
-
-### Administration
-
-| Command       | Behaviour                                                    |
-| :------------ | :----------------------------------------------------------- |
-| `add-channel` | Registers a channel for specific bot uses.                   |
-| `exclude`     | Opts a user out of bot activities entirely.                  |
-| `punish`      | Removes points from chosen users.                            |
-| `settings`    | Configures per-guild behaviour, such as the primary channel. |
+The live command list, with descriptions, is available from the bot itself with `/info`.
 
 ---
 
-## Technical notes
+## How it works
 
-### The duel is a multi-step stateful interaction
+### Structure
 
-`duel` is the most involved thing in the codebase. The challenger stakes points and
-names an opponent; the bot posts an embed with **Accept** and **Decline** buttons.
-Declining ends it (with an insult). Accepting swaps the same message's components for
-rock–paper–scissors, and the bot then waits for both players to choose before resolving
-and transferring the stake.
+[Sapphire](https://www.sapphirejs.dev/) on top of discord.js handles command
+registration, preconditions and centralised error handling. The code is split by
+responsibility:
 
-<div align="center">
-  <img src="docs/assets/schema.svg" alt="Schema" width="460">
-</div>
+- `features/` - one folder per feature, each holding its commands, listeners,
+  scheduled tasks, constants and message pools.
+- `core/` - services and repositories: the only layer that talks to the database.
+- `infrastructure/` - configuration, logging, the database client, the AI clients and
+  the domain error types.
+- `shared/` - preconditions, cross-cutting listeners, utilities and types.
 
-This means holding interaction state across multiple messages and users, mutating a live
-message's components in place, authorising each button press against the right player,
-and resolving only once both inputs have arrived. A very small state machine, and the
-proof of concept for future minigames.
+Guards such as "guild configured", "user not excluded", "target is not a bot" and
+"target is not yourself" are preconditions composed per command rather than checks
+copied into each handler. Domain errors carry a code that maps to a user-facing message,
+so failures reach the user as a short ephemeral reply and reach the logs with context.
 
-### In-character LLM responses via a local model
-
-Mentioning the bot with `@` routes the message to a locally hosted model through
-[Ollama](https://ollama.com/), which answers in the bot's persona.
-
-> [!NOTE]
-> The responses are frequently incoherent and rarely useful. **This is mostly
-> intentional** - the goal was a character with a voice, not a support assistant, and a
-> bot that confidently answers wrong is funnier.
-
-Running the model locally rather than against a hosted API also means no API key, no
-per-token cost, and no message content leaving the machine. The current model is
-`salamandra-2b-instruct`, chosen because it had the best Spanish of the ones that fit
-the server's resource budget - subject to change.
-
-### Event handling
-
-Two kinds:
-
-- **Reactive** - mention handling, minefield detonation on every message in a mined
-  channel, and diagnostics for denied commands and runtime errors.
-- **Scheduled** - backed by BullMQ, currently used by `reminder` to fire a message at an
-  arbitrary future time. More scheduled features are on the
-  [roadmap](#status-and-roadmap).
+New pieces are scaffolded with `npm run g:command`, `g:listener` and `g:precondition`.
 
 ### Persistence
 
-SQLite with **Drizzle** and versioned migrations in `db/migrations`.
+SQLite through **Drizzle**, with versioned migrations in `db/migrations` that run on
+startup. Migrations seemed overkill at first, but between the constant schema churn and
+the need to preserve points across deploys, they earned their place.
 
-Migrations seemed overkill, but between the constant schema churn and the need to
-preserve points, they earned their place. Versioning the schema means the running
-instance can be updated without losing the state that makes the economy worth
-participating in.
+All balance changes are guarded at the SQL level (a deduction only succeeds if the balance
+covers it; daily cooldowns are claimed atomically), so two quick invocations cannot both
+slip through. Games that hold stakes record them in a `game_sessions` table the moment
+they are taken; if the process dies mid-game, the next boot refunds every open session
+and closes the message it left behind.
 
-### Opt-out is a first-class feature
+### Scheduling
 
-`exclude` removes a user from bot activities completely. Not everyone in a server wants
-to be minefield-eligible or duel-challengeable.
+**BullMQ** on Redis backs both the cron-style jobs (birthday sweep, daily copypasta) and
+the delayed ones (reminders). Jobs survive restarts, retry with backoff, and the
+birthday sweep also runs a catch-up on boot in case the bot was down at the scheduled hour.
 
-### This is the third rewrite
+### AI, all local
 
-Version one worked and was a mess: no structure, errors surfacing everywhere, command
-handling and business logic tangled together. Version two improved it. Version three -
-this one - is the rewrite where I stopped hand-rolling the plumbing:
+Mentions go to a persona model served by [Ollama](https://ollama.com/) (built from
+`ai/necoarc.Modelfile`). Images go through a CLIP zero-shot classifier via
+transformers.js, warmed up on startup and cached on disk. The uwufier is a local library
+too. Nothing a user writes or posts leaves the machine; the only outbound traffic is the
+copypasta fetch.
 
-- **Sapphire** for command registration, preconditions and centralised error handling,
-  instead of my own dispatcher.
-- **A layered structure** separating commands, event listeners, database access and the
-  AI client.
-- **CI on GitHub Actions**, gating deployment on typecheck, lint, formatting and tests.
-- **Containerised deployment** with a versioned deploy script.
+> [!NOTE]
+> The chat responses are frequently incoherent and rarely useful. **This is mostly
+> intentional** - the goal was a character with a voice, not a support assistant, and a
+> bot that confidently answers wrong is funnier. The current model was chosen for its
+> Spanish within the server's resource budget and is subject to change.
 
-> What I learned: the first version taught me what the bot needed to do, and
-> trying to keep extending it taught me why structure exists. Through iteration,
-> I learned how to improve and take the project closer to its final goal
+### Guardrails
+
+- Opt-out is first-class: an excluded user is invisible to every game, listener and
+  targeted command.
+- The bot never pings `@everyone` or roles, no matter what a nickname, a reminder note
+  or a model reply contains.
+- Anything that needs Discord permissions checks them before spending points, so a
+  missing permission cannot eat a stake.
+
+### Quality
+
+Strict TypeScript, ESLint and Prettier. Unit tests mock the boundaries; integration tests
+run the real repositories against an in-memory SQLite with the real migrations. A drift
+test fails whenever a command exists that `/info` does not list. CI runs typecheck, lint,
+format check, tests and the build on every push, and deploys `main` to the server over an
+SSH tunnel.
+
+### Why it looks like this
+
+This is the third rewrite. Version one worked but was a mess: no structure, errors
+surfacing everywhere, command handling and business logic tangled together. Version two
+improved it. Version three is where I stopped hand-rolling the plumbing and let the
+framework, the ORM and the job queue do their jobs.
+
+> What I learned: the first version taught me what the bot needed to do, and trying to
+> keep extending it taught me why structure exists.
 
 ---
 
 ## Tech stack
 
-| Layer          | Technology                                       |
-| :------------- | :----------------------------------------------- |
-| **Language**   | TypeScript                                       |
-| **CI**         | GitHub Actions                                   |
-| **Quality**    | ESLint, Prettier                                 |
-| **Framework**  | Sapphire (discord.js)                            |
-| **AI**         | Ollama, locally hosted model                     |
-| **Deployment** | Docker, self-hosted on a personal Linux server   |
-| **Database**   | SQLite with Drizzle ORM and versioned migrations |
+| Layer          | Technology                                             |
+| :------------- | :----------------------------------------------------- |
+| **Language**   | TypeScript (strict), Node 22                           |
+| **Framework**  | Sapphire on discord.js                                 |
+| **Database**   | SQLite with Drizzle ORM and versioned migrations       |
+| **Jobs**       | BullMQ on Redis                                        |
+| **AI**         | Ollama (chat persona), transformers.js CLIP (vision)   |
+| **Voice**      | @discordjs/voice with ffmpeg                           |
+| **Quality**    | Vitest, ESLint, Prettier                               |
+| **CI**         | GitHub Actions                                         |
+| **Deployment** | Docker Compose, self-hosted on a personal Linux server |
 
 ---
 
 ## Running it
 
-**Requirements:** Docker, and an Ollama instance reachable from the container.
+**Requirements:** Docker, and an Ollama instance reachable from the container. Redis is
+part of the compose file.
 
 ```bash
 git clone https://github.com/ManusolJ/Necobot.git
 cd Necobot
 
 cp .env.example .env
-# Discord bot token, dev guild ID, database path, Redis host/port and Ollama endpoint
+# BOT_TOKEN and OLLAMA_URL are required; the rest are optional or have defaults
 
 mkdir -p db/data
 
@@ -187,18 +183,30 @@ docker compose up --build
 ```
 
 The `mkdir` matters: the container runs as an unprivileged user and the SQLite file lives
-on a bind mount, so the directory has to exist first. Migrations then run automatically on
+on a bind mount, so the directory has to exist first. Migrations run automatically on
 startup.
 
-For in-character mention replies, the persona model also has to be built on the Ollama
-host - the bot requests it by name and the feature stays silent if it is missing:
+For in-character replies, build the persona model on the Ollama host. The bot requests it
+by name and the feature stays silent if it is missing:
 
 ```bash
 ollama create necoarc -f ai/necoarc.Modelfile
 ```
 
+For local development without Docker you need Node 22, a Redis instance and the same
+`.env`:
+
+```bash
+npm install
+npm run dev                     # tsx watch
+npm test                        # vitest
+npm run db:generate -- <name>   # after changing the schema
+```
+
 > [!IMPORTANT]
-> `.env.example` documents every required variable.
+> `.env.example` documents every variable. Set `DISCORD_DEV_GUILD_ID` to mirror the
+> global commands into a test server instantly instead of waiting for Discord's global
+> rollout.
 
 ---
 
@@ -207,10 +215,13 @@ ollama create necoarc -f ai/necoarc.Modelfile
 Live and in continuous use on one private server. Not built to be a public, multi-guild
 bot.
 
-- [ ] **Scheduled features** on top of the existing task infrastructure: a daily greeting,
-      a daily copypasta, a weekly economy leaderboard and a weekly lottery.
-- [ ] **An admin `inspect` command** for reading a user's raw economy record.
-- [ ] **More minigames** feeding the same economy.
+- [x] Scheduled features on the task infrastructure: birthdays and the daily copypasta.
+- [x] Stateful games that survive restarts.
+- [ ] More scheduled features: a daily greeting, a weekly economy leaderboard and a
+      weekly lottery.
+- [ ] An admin `inspect` command for reading a user's raw economy record.
+- [ ] Localization of all user facing messages to english.
+- [ ] More minigames feeding the same economy.
 
 ---
 
