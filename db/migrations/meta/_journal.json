@@ -85,6 +85,13 @@
       "when": 1789042092663,
       "tag": "0011_add_birthday_to_user_table",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1789237273421,
+      "tag": "0012_game_sessions",
+      "breakpoints": true
     }
   ]
 }
