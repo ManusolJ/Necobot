@@ -449,7 +449,7 @@ describe("confiscatePointsPercent", () => {
     expect(deductGuildUserPoints).not.toHaveBeenCalled();
   });
 
-  // Edge case: a balance that somehow went negative must not be treated as something worth confiscating.
+  // A negative balance (mine and monster penalties are allowed to overdraw) is nothing worth confiscating.
   it("returns undefined for a negative balance", () => {
     findGuildUser.mockReturnValue(guildUser({ points: -10 }));
 

@@ -1,3 +1,4 @@
+import { db } from "@infrastructure/database/client.js";
 import { GuildUserPersistError } from "@infrastructure/errors/domain.errors.js";
 
 import {
@@ -12,11 +13,17 @@ import {
   setGuildUserUwufication,
   claimGuildUserBirthdayGift,
   consumeGuildUserUwufication,
+  restoreGuildUserUwufication,
+  claimGuildUserDailyBeg,
+  claimGuildUserDailyDrink,
+  setGuildUserLastDrinkedAt,
   claimGuildUserBirthdayWarning,
 } from "@core/repositories/user.repository.js";
 
 import type { Birthday } from "@shared/types/birthday.type.js";
 import type { GuildUser } from "@shared/types/guild-user.type.js";
+
+import { nowInBotZone } from "@shared/utils/calendar.util.js";
 
 export function getGuildUser(guildId: string, userId: string): GuildUser | undefined {
   return findGuildUser(guildId, userId);
@@ -52,6 +59,10 @@ export function setUserUwufication(guildId: string, userId: string, numberOfMess
 
 export function consumeUwufiedMessage(guildId: string, userId: string): boolean {
   return consumeGuildUserUwufication(guildId, userId) !== undefined;
+}
+
+export function restoreUwufiedMessage(guildId: string, userId: string): void {
+  restoreGuildUserUwufication(guildId, userId);
 }
 
 export function setUserBirthday(guildId: string, userId: string, birthday: Birthday): GuildUser {
@@ -103,8 +114,47 @@ export function recordBeg(guildId: string, userId: string, pointsEarned: number)
   return result;
 }
 
+function startOfToday(): Date {
+  return nowInBotZone().startOf("day").toJSDate();
+}
+
+/**
+ * Claims today's monster attempt before any slow work happens. Returns what `lastDrinkedAt` was so
+ * the caller can hand the attempt back with `releaseDailyDrink` if the picture turns out not to count.
+ */
+export function claimDailyDrink(guildId: string, userId: string): { previous: Date | null } | undefined {
+  const previous = findGuildUser(guildId, userId)?.lastDrinkedAt ?? null;
+
+  return claimGuildUserDailyDrink(guildId, userId, startOfToday()) ? { previous } : undefined;
+}
+
+export function releaseDailyDrink(guildId: string, userId: string, previous: Date | null): void {
+  setGuildUserLastDrinkedAt(guildId, userId, previous);
+}
+
+/** Claims today's beg attempt. False means the user already begged today. */
+export function claimDailyBeg(guildId: string, userId: string): boolean {
+  return claimGuildUserDailyBeg(guildId, userId, startOfToday()) !== undefined;
+}
+
 export function recordDrink(guildId: string, userId: string, pointsDelta: number): GuildUser {
   const result = recordMonsterDrink({ guildId, userId, pointsDelta });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+export function recordScan(guildId: string, userId: string): GuildUser {
+  const result = applyGuildUserDelta({
+    guildId,
+    userId,
+    deltas: {
+      scannedThings: 1,
+    },
+  });
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -133,11 +183,46 @@ export function subtractPointsFromUser(guildId: string, userId: string, points: 
   return deductGuildUserPoints(guildId, userId, points);
 }
 
+/**
+ * Moves points between two users atomically. Returns the sender's updated row, or undefined when
+ * they cannot cover the amount, in which case nothing was written.
+ */
+export function transferPoints(guildId: string, fromId: string, toId: string, points: number): GuildUser | undefined {
+  return db.transaction(() => {
+    const charged = deductGuildUserPoints(guildId, fromId, points);
+
+    if (!charged) {
+      return undefined;
+    }
+
+    if (!applyGuildUserDelta({ guildId, userId: toId, deltas: { points } })) {
+      throw new GuildUserPersistError(guildId, toId);
+    }
+
+    return charged;
+  });
+}
+
 export function sumPointsToUser(guildId: string, userId: string, points: number): GuildUser {
   const result = applyGuildUserDelta({
     guildId,
     userId,
     deltas: { points },
+  });
+
+  if (!result) {
+    throw new GuildUserPersistError(guildId, userId);
+  }
+
+  return result;
+}
+
+/** A grant from the bot itself (rewards, prizes): counts towards `historicalPoints`, unlike transfers or refunds. */
+export function grantPointsToUser(guildId: string, userId: string, points: number): GuildUser {
+  const result = applyGuildUserDelta({
+    guildId,
+    userId,
+    deltas: { points, historicalPoints: points },
   });
 
   if (!result) {

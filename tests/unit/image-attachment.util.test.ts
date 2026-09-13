@@ -117,7 +117,7 @@ describe("downloadImage", () => {
 
   // Normal case: the download must target the attachment URL and carry a timeout signal so it cannot hang.
   it("requests the attachment url with a timeout signal", async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, blob: () => Promise.resolve(new Blob()) });
+    fetchMock.mockResolvedValue({ ok: true, status: 200, blob: () => Promise.resolve(new Blob([])) });
 
     await downloadImage(attachment({ url: "https://cdn.example/cat.png" }));
 
@@ -128,14 +128,14 @@ describe("downloadImage", () => {
 
   // Error handling: an expired CDN link returns 404, which must degrade to undefined rather than throw.
   it("returns undefined when the CDN responds with an error status", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 404, blob: () => Promise.resolve(new Blob()) });
+    fetchMock.mockResolvedValue({ ok: false, status: 404, blob: () => Promise.resolve(new Blob([])) });
 
     expect(await downloadImage(attachment())).toBeUndefined();
   });
 
   // Error handling: a server-side failure is treated the same way, letting the command fall back to a canned reply.
   it("returns undefined on a server error status", async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 500, blob: () => Promise.resolve(new Blob()) });
+    fetchMock.mockResolvedValue({ ok: false, status: 500, blob: () => Promise.resolve(new Blob([])) });
 
     expect(await downloadImage(attachment())).toBeUndefined();
   });

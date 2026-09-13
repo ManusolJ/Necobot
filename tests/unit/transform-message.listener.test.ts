@@ -12,10 +12,16 @@ const uwuifyText = vi.hoisted(() => vi.fn());
 const isUserUwufied = vi.hoisted(() => vi.fn());
 const isUserExcluded = vi.hoisted(() => vi.fn());
 const consumeUwufiedMessage = vi.hoisted(() => vi.fn());
+const restoreUwufiedMessage = vi.hoisted(() => vi.fn());
 const botCanRewriteMessages = vi.hoisted(() => vi.fn());
 
 vi.mock("@features/uwufier/uwufier.service.js", () => ({ uwuifyText }));
-vi.mock("@core/services/user.service.js", () => ({ isUserUwufied, isUserExcluded, consumeUwufiedMessage }));
+vi.mock("@core/services/user.service.js", () => ({
+  isUserUwufied,
+  isUserExcluded,
+  consumeUwufiedMessage,
+  restoreUwufiedMessage,
+}));
 vi.mock("@shared/utils/verify-bot-permissions.util.js", () => ({ botCanRewriteMessages }));
 
 const { TransformMessageListener } = await import("@features/uwufier/listeners/transform-message.listener.js");
@@ -69,10 +75,11 @@ beforeEach(() => {
   fetchWebhooks = vi.fn().mockResolvedValue(new Collection());
   createWebhook = vi.fn().mockResolvedValue({ send, token: "t", owner: { id: "bot-1" } });
 
-  uwuifyText.mockReset().mockResolvedValue("hewwo wowwd");
+  uwuifyText.mockReset().mockReturnValue("hewwo wowwd");
   isUserUwufied.mockReset().mockReturnValue(true);
   isUserExcluded.mockReset().mockReturnValue(false);
   consumeUwufiedMessage.mockReset().mockReturnValue(true);
+  restoreUwufiedMessage.mockReset();
   botCanRewriteMessages.mockReset().mockReturnValue(true);
 });
 
@@ -160,18 +167,38 @@ describe("TransformMessageListener", () => {
     expect(consumeUwufiedMessage).toHaveBeenCalledWith(GUILD, "user-1");
   });
 
-  // The buyer must not lose a paid message when the rewrite never reached the channel.
-  it("does not spend a message when the rewrite fails", async () => {
+  // The buyer must not lose a paid message when the rewrite never reached the channel. The message
+  // is taken up front (that is the race guard) and handed back when the repost fails.
+  it("hands the message back when the rewrite fails", async () => {
     send.mockRejectedValue(new Error("webhook gone"));
 
     await listener.run(stubMessage());
 
-    expect(consumeUwufiedMessage).not.toHaveBeenCalled();
+    expect(consumeUwufiedMessage).toHaveBeenCalledTimes(1);
+    expect(restoreUwufiedMessage).toHaveBeenCalledWith(GUILD, "user-1");
   });
 
-  // A failed API call is not the user's message being rewritten, so nothing is spent.
-  it("does not spend a message when the API returns nothing", async () => {
-    uwuifyText.mockResolvedValue(undefined);
+  it("does not hand anything back after a successful rewrite", async () => {
+    await listener.run(stubMessage());
+
+    expect(restoreUwufiedMessage).not.toHaveBeenCalled();
+  });
+
+  // Regression: a burst of messages used to all pass one stale "is uwufied" read. Now the atomic
+  // decrement decides, so a message that loses that race is left alone.
+  it("leaves the message alone when the decrement loses the race", async () => {
+    consumeUwufiedMessage.mockReturnValue(false);
+
+    await listener.run(stubMessage());
+
+    expect(send).not.toHaveBeenCalled();
+    expect(deleteMessage).not.toHaveBeenCalled();
+    expect(restoreUwufiedMessage).not.toHaveBeenCalled();
+  });
+
+  // Nothing to rewrite is not the user's message being rewritten, so nothing is spent.
+  it("does not spend a message when there is nothing to rewrite", async () => {
+    uwuifyText.mockReturnValue(undefined);
 
     await listener.run(stubMessage());
 
@@ -221,9 +248,9 @@ describe("TransformMessageListener", () => {
     expect(uwuifyText).not.toHaveBeenCalled();
   });
 
-  // A failed rewrite from the API leaves the original message untouched.
-  it("leaves the message alone when the API returns nothing", async () => {
-    uwuifyText.mockResolvedValue(undefined);
+  // A rewrite that produced nothing leaves the original message untouched.
+  it("leaves the message alone when there is nothing to rewrite", async () => {
+    uwuifyText.mockReturnValue(undefined);
 
     await listener.run(stubMessage());
 
@@ -248,5 +275,27 @@ describe("TransformMessageListener", () => {
     await listener.run(stubMessage());
 
     expect(createWebhook).toHaveBeenCalled();
+  });
+
+  // Fetching the webhook list is a REST call; one per rewritten message would be wasteful.
+  it("remembers the webhook of a channel across messages", async () => {
+    const channel = stubMessage().channel;
+
+    await listener.run(stubMessage({ channel }));
+    await listener.run(stubMessage({ channel, id: "message-2" }));
+
+    expect(fetchWebhooks).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  // A webhook that stopped working (deleted by a moderator) must be looked up again next time.
+  it("forgets the webhook after a failed send", async () => {
+    const channel = stubMessage().channel;
+    send.mockRejectedValueOnce(new Error("Unknown Webhook"));
+
+    await listener.run(stubMessage({ channel }));
+    await listener.run(stubMessage({ channel, id: "message-2" }));
+
+    expect(fetchWebhooks).toHaveBeenCalledTimes(2);
   });
 });
