@@ -1,4 +1,4 @@
-export const AI_HISTORY_MAX_MESSAGES = 12;
+export const AI_HISTORY_MAX_MESSAGES = 6;
 
 export const AI_HISTORY_TTL_MS = 15 * 60 * 1000;
 
