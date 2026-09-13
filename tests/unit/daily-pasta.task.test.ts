@@ -1,4 +1,4 @@
-import { CopypastaFetchError } from "@infrastructure/errors/domain.errors.js";
+import { CopypastaFetchError, CopypastaDeliveryError } from "@infrastructure/errors/domain.errors.js";
 
 import { COPYPASTA_SUBREDDIT, COPYPASTA_CHANNEL_PURPOSE } from "@features/copypasta/copypasta.constants.js";
 
@@ -9,10 +9,13 @@ const fetchTopPosts = vi.hoisted(() => vi.fn());
 const pickCopypasta = vi.hoisted(() => vi.fn());
 const formatCopypasta = vi.hoisted(() => vi.fn());
 const getChannelsByPurpose = vi.hoisted(() => vi.fn());
+const markCopypastaPosted = vi.hoisted(() => vi.fn());
 
 vi.mock("@infrastructure/reddit/reddit.client.js", () => ({ fetchTopPosts }));
 
 vi.mock("@core/services/guild.service.js", () => ({ getChannelsByPurpose }));
+
+vi.mock("@core/services/copypasta-history.service.js", () => ({ markCopypastaPosted }));
 
 vi.mock("@features/copypasta/copypasta.service.js", () => ({ pickCopypasta, formatCopypasta }));
 
@@ -54,6 +57,7 @@ beforeEach(() => {
   fetchTopPosts.mockReset().mockResolvedValue([POST]);
   pickCopypasta.mockReset().mockReturnValue(POST);
   formatCopypasta.mockReset().mockReturnValue(CONTENT);
+  markCopypastaPosted.mockReset();
 });
 
 afterEach(() => {
@@ -142,11 +146,37 @@ describe("DailyPastaTask", () => {
     expect(send).toHaveBeenCalledTimes(3);
   });
 
-  // A send failure is logged and swallowed, so the job must not fail and trigger a duplicate retry.
-  it("does not fail the job when a send fails", async () => {
-    send.mockRejectedValue(new Error("Missing Permissions"));
+  // A partial failure is logged and swallowed: failing the job would retry and repost to the
+  // guilds that were already served.
+  it("does not fail the job when some sends fail", async () => {
+    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2"));
+    send.mockRejectedValueOnce(new Error("Missing Permissions"));
 
     await expect(task().run()).resolves.toBeUndefined();
+    expect(markCopypastaPosted).toHaveBeenCalledWith("a1");
+  });
+
+  // Nothing delivered means nobody saw the post: it must not be burned, and the job fails so the
+  // retry policy gets another go.
+  it("fails the job and records nothing when no guild could be sent to", async () => {
+    send.mockRejectedValue(new Error("Missing Permissions"));
+
+    await expect(task().run()).rejects.toBeInstanceOf(CopypastaDeliveryError);
+    expect(markCopypastaPosted).not.toHaveBeenCalled();
+  });
+
+  it("records the post once it has been delivered", async () => {
+    await task().run();
+
+    expect(markCopypastaPosted).toHaveBeenCalledWith("a1");
+  });
+
+  it("records nothing when no post is eligible", async () => {
+    pickCopypasta.mockReturnValue(undefined);
+
+    await task().run();
+
+    expect(markCopypastaPosted).not.toHaveBeenCalled();
   });
 
   // The task reads the channels registered under the copypasta purpose, not some other list.

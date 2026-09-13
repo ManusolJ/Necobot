@@ -1,5 +1,6 @@
 import { db } from "@infrastructure/database/client.js";
 import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
+import { gameSessions } from "@infrastructure/database/schema/game-session.schema.js";
 import { guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
 
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
@@ -14,6 +15,7 @@ export function useMigratedDatabase(): void {
 }
 
 export function resetDatabase(): void {
+  db.delete(gameSessions).run();
   db.delete(guildUsers).run();
   db.delete(guildChannels).run();
   db.delete(guildSettings).run();

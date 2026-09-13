@@ -76,16 +76,10 @@ describe("pickCopypasta", () => {
     expect(pickCopypasta([post()])).toBeUndefined();
   });
 
-  // Normal case: a pick has to be written back, or the next run would repeat it.
-  it("records the post it picked", () => {
+  // Picking is not posting: the history is written by the task once something was delivered,
+  // otherwise a pick that never reached a channel would be burned for the retention window.
+  it("does not record the post it picked", () => {
     pickCopypasta([post()]);
-
-    expect(markCopypastaPosted).toHaveBeenCalledWith("a1");
-  });
-
-  // Edge case: nothing eligible means nothing recorded.
-  it("records nothing when no post is eligible", () => {
-    pickCopypasta([post({ selftext: "corto" })]);
 
     expect(markCopypastaPosted).not.toHaveBeenCalled();
   });
