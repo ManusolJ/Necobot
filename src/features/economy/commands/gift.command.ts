@@ -1,6 +1,4 @@
-import { logger } from "@infrastructure/config/logger.config.js";
-
-import { isUserExcluded, subtractPointsFromUser, sumPointsToUser } from "@core/services/user.service.js";
+import { isUserExcluded, transferPoints } from "@core/services/user.service.js";
 
 import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 
@@ -59,21 +57,13 @@ export class GiftCommand extends Command {
       return;
     }
 
-    const charged = subtractPointsFromUser(guildId, member.id, amount);
+    const charged = transferPoints(guildId, member.id, target.id, amount);
     if (!charged) {
       await interaction.reply({
         content: `Nyaha~ ¿regalando **${amount}** puntos sin tenerlos, ${member.displayName}? La generosidad de los pobres me conmueve, pero no.`,
         flags: MessageFlags.Ephemeral,
       });
       return;
-    }
-
-    try {
-      sumPointsToUser(guildId, target.id, amount);
-    } catch (error) {
-      logger.error({ err: error, guildId, from: member.id, to: target.id, amount }, "Gift transfer failed; refunding");
-      sumPointsToUser(guildId, member.id, amount);
-      throw error;
     }
 
     await interaction.reply(
