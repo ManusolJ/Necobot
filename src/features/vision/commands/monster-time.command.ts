@@ -1,12 +1,12 @@
-import { getGuildUser, recordDrink } from "@core/services/user.service.js";
+import { recordDrink, claimDailyDrink, releaseDailyDrink } from "@core/services/user.service.js";
 
 import type { VisionResult } from "@shared/types/vision-result.type.js";
 
+import { isFriday } from "@shared/utils/calendar.util.js";
 import { randomInt } from "@shared/utils/random-int.util.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
 import { requireGuildMember } from "@shared/utils/guild-context.util.js";
-import { isFriday, isSameCalendarDay } from "@shared/utils/calendar.util.js";
 
 import { analyzeImage } from "../vision.service.js";
 import { VISION_FALLBACK } from "../vision.messages.js";
@@ -14,11 +14,12 @@ import { assertSupportedImage, downloadImage } from "../image-attachment.util.js
 import { MAX_POINTS_CHANGE_PER_DRINK, MIN_POINTS_CHANGE_PER_DRINK } from "../monster.constants.js";
 import { FRIDAY_MONSTER, IS_NOT_FRIDAY, MONSTER_COOLDOWN, NOT_A_MONSTER } from "../monster.messages.js";
 
-import type { ChatInputCommandInteraction } from "discord.js";
+import type { Attachment, ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
 import { Command } from "@sapphire/framework";
 import { AttachmentBuilder, MessageFlags } from "discord.js";
+import { Inspection } from "@shared/types/inspection.type.js";
 
 export class MonsterTimeCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {
@@ -45,9 +46,9 @@ export class MonsterTimeCommand extends Command {
 
     assertSupportedImage(attachment);
 
-    const user = getGuildUser(guildId, member.id);
+    const claim = claimDailyDrink(guildId, member.id);
 
-    if (user?.lastDrinkedAt && isSameCalendarDay(user.lastDrinkedAt, new Date())) {
+    if (!claim) {
       await interaction.reply({
         content: formatMessage(pickRandom(MONSTER_COOLDOWN), { user: member.displayName }),
         flags: MessageFlags.Ephemeral,
@@ -55,42 +56,62 @@ export class MonsterTimeCommand extends Command {
       return;
     }
 
-    await interaction.deferReply();
+    let counted = false;
 
+    try {
+      await interaction.deferReply();
+
+      const inspection = await this.inspect(interaction, attachment);
+
+      if (!inspection) {
+        return;
+      }
+
+      if (!this.isMonster(inspection.result)) {
+        await interaction.editReply({
+          content: formatMessage(pickRandom(NOT_A_MONSTER), { user: member.displayName }),
+          files: [inspection.file],
+        });
+        return;
+      }
+
+      const friday = isFriday();
+      const amount = randomInt(MIN_POINTS_CHANGE_PER_DRINK, MAX_POINTS_CHANGE_PER_DRINK);
+
+      recordDrink(guildId, member.id, friday ? amount : -amount);
+      counted = true;
+
+      await interaction.editReply({
+        content: this.buildReply(member.displayName, amount, friday),
+        files: [inspection.file],
+      });
+    } finally {
+      if (!counted) {
+        releaseDailyDrink(guildId, member.id, claim.previous);
+      }
+    }
+  }
+
+  private async inspect(
+    interaction: ChatInputCommandInteraction,
+    attachment: Attachment,
+  ): Promise<Inspection | undefined> {
     const image = await downloadImage(attachment);
 
     if (!image) {
       await interaction.editReply(VISION_FALLBACK);
-      return;
+      return undefined;
     }
 
     const file = new AttachmentBuilder(Buffer.from(await image.arrayBuffer()), { name: attachment.name });
-
     const result = await analyzeImage(image);
 
     if (result.status === "unavailable") {
       await interaction.editReply({ content: VISION_FALLBACK, files: [file] });
-      return;
+      return undefined;
     }
 
-    if (!this.isMonster(result)) {
-      await interaction.editReply({
-        content: formatMessage(pickRandom(NOT_A_MONSTER), { user: member.displayName }),
-        files: [file],
-      });
-      return;
-    }
-
-    const friday = isFriday();
-    const amount = randomInt(MIN_POINTS_CHANGE_PER_DRINK, MAX_POINTS_CHANGE_PER_DRINK);
-    const pointsDelta = friday ? amount : -amount;
-
-    recordDrink(guildId, member.id, pointsDelta);
-
-    await interaction.editReply({
-      content: this.buildReply(member.displayName, amount, friday),
-      files: [file],
-    });
+    return { file, result };
   }
 
   private isMonster(result: VisionResult): boolean {

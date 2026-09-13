@@ -1,3 +1,5 @@
+import { recordScan } from "@core/services/user.service.js";
+
 import type { VisionResult } from "@shared/types/vision-result.type.js";
 
 import { pickRandom } from "@shared/utils/pick-random.util.js";
@@ -33,7 +35,7 @@ export class ScanCommand extends Command {
   }
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
-    const { member } = requireGuildMember(interaction);
+    const { guildId, member } = requireGuildMember(interaction);
     const attachment = interaction.options.getAttachment("imagen", true);
 
     assertSupportedImage(attachment);
@@ -50,6 +52,10 @@ export class ScanCommand extends Command {
     const file = new AttachmentBuilder(Buffer.from(await image.arrayBuffer()), { name: attachment.name });
 
     const result = await analyzeImage(image);
+
+    if (result.status !== "unavailable") {
+      recordScan(guildId, member.id);
+    }
 
     await interaction.editReply({
       content: this.buildReply(result, member.displayName),
