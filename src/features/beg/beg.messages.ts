@@ -34,7 +34,7 @@ export const BEG_SUCCESS: readonly string[] = [
   "Burunya~ tus súplicas me alimentan, {user}. Aquí tienes **{amount}**. Úsalos con irresponsabilidad.",
   "Mira {user}, no me das pena, me das contenido. Toma **{amount}** puntos. Ahora baila, pequeño bufón.",
   "¿Otra vez pidiendo, {user}? Qué cringe... Toma **{amount}**. Y recuerda: el caos no se mendiga, se provoca.",
-  "Una súplica más y me transformo en Hacienda. Aquí tienes **{amount}**, {user}. Pero no me hables por 24 horas.",
+  "Una súplica más y me transformo en Hacienda. Aquí tienes **{amount}**, {user}. Pero no me hables hasta mañana.",
   "Te pareces a un NPC rogando por monedas, {user}. Toma **{amount}** puntos y lárgate antes de que me arrepienta.",
   "**{amount}** puntos, {user}. La factura por procesar tu súplica te llegará a las 3 AM en forma de crisis existencial.",
   "Burunyaa~ ¿De verdad has caído tan bajo como para suplicar, {user}? Toma un ladrillo y esto de propina: **{amount}**.",

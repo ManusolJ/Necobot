@@ -1,9 +1,8 @@
 import { getGuildSettings } from "@core/services/guild.service.js";
-import { getGuildUser, recordBeg } from "@core/services/user.service.js";
+import { recordBeg, claimDailyBeg } from "@core/services/user.service.js";
 
 import { randomInt } from "@shared/utils/random-int.util.js";
 import { pickRandom } from "@shared/utils/pick-random.util.js";
-import { isSameCalendarDay } from "@shared/utils/calendar.util.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
 import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 
@@ -42,9 +41,7 @@ export class BegCommand extends Command {
     const userId = member.id;
     const displayName = member.displayName;
 
-    const user = getGuildUser(guildId, userId);
-
-    if (user?.lastBeggedAt && isSameCalendarDay(user.lastBeggedAt, new Date())) {
+    if (!claimDailyBeg(guildId, userId)) {
       await interaction.reply({
         content: formatMessage(pickRandom(BEG_COOLDOWN), { user: displayName }),
         flags: MessageFlags.Ephemeral,
