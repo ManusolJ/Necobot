@@ -1,4 +1,5 @@
 import { Segment } from "@shared/types/uwu-segment.type.js";
+
 import { UWUFY_WORDS_CHANCE, UWUFY_SPACES_CHANCE, UWUFY_EXCLAMATIONS_CHANCE } from "./uwufier.constants.js";
 
 import Uwuifier from "uwuifier";

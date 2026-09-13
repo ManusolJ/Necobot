@@ -66,6 +66,7 @@ export class UwufierCommand extends Command {
           count: UWUFY_MESSAGE_COUNT,
         }),
         allowedMentions: { users: [target.id] },
+        flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
       this.refund(guildId, member.id);

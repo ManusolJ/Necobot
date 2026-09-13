@@ -1,8 +1,8 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 
 import {
-  isUserExcluded,
   isUserUwufied,
+  isUserExcluded,
   consumeUwufiedMessage,
   restoreUwufiedMessage,
 } from "@core/services/user.service.js";
