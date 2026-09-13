@@ -24,6 +24,10 @@ export class ReminderTask extends ScheduledTask<"reminder"> {
     }
 
     const note = payload.note ? `: **${payload.note}**` : ". No me dijiste de qué. Problema tuyo, nyaha~.";
-    await channel.send(`⏰ <@${payload.userId}> ¡Me pediste que te recordara algo${note}`);
+
+    await channel.send({
+      content: `<@${payload.userId}> ¡Me pediste que te recordara algo${note}`,
+      allowedMentions: { users: [payload.userId] },
+    });
   }
 }
