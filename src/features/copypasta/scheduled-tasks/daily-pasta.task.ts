@@ -1,8 +1,9 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 import { fetchTopPosts } from "@infrastructure/reddit/reddit.client.js";
-import { CopypastaFetchError } from "@infrastructure/errors/domain.errors.js";
+import { CopypastaFetchError, CopypastaDeliveryError } from "@infrastructure/errors/domain.errors.js";
 
 import { getChannelsByPurpose } from "@core/services/guild.service.js";
+import { markCopypastaPosted } from "@core/services/copypasta-history.service.js";
 
 import { BOT_TIMEZONE } from "@shared/consts/config.constants.js";
 
@@ -66,6 +67,7 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
     }
 
     const content = formatCopypasta(post);
+    let delivered = 0;
 
     for (const { guildId, channelId } of channels) {
       const channel = await this.container.client.channels.fetch(channelId).catch(() => null);
@@ -77,9 +79,16 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
 
       try {
         await channel.send({ content, allowedMentions: { parse: [] } });
+        delivered += 1;
       } catch (error) {
         logger.warn({ err: error, guildId, channelId }, "Could not send the copypasta; skipping this guild");
       }
     }
+
+    if (delivered === 0) {
+      throw new CopypastaDeliveryError(post.id, channels.length);
+    }
+
+    markCopypastaPosted(post.id);
   }
 }

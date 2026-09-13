@@ -1,4 +1,4 @@
-import { getPostedCopypastaIds, markCopypastaPosted } from "@core/services/copypasta-history.service.js";
+import { getPostedCopypastaIds } from "@core/services/copypasta-history.service.js";
 
 import type { RedditPost } from "@shared/types/reddit-post.type.js";
 
@@ -22,14 +22,7 @@ export function pickCopypasta(posts: RedditPost[]): RedditPost | undefined {
   const preferred = eligible.filter((post) => post.selftext.length <= COPYPASTA_MAX_LENGTH);
   const pool = preferred.length > 0 ? preferred : eligible;
 
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
-
-  if (!chosen) {
-    return undefined;
-  }
-
-  markCopypastaPosted(chosen.id);
-  return chosen;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export function formatCopypasta(post: RedditPost): string {
