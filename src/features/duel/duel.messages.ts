@@ -42,11 +42,11 @@ export const DUEL_WIN: readonly string[] = [
 ];
 
 export const DUEL_NO_CHOICE_BOTH: readonly string[] = [
-  "NINGUNO ha elegido. Cinco minutos mirándoos como pasmarotes. Os quedáis sin apuesta los dos, par de indecisos.",
+  "NINGUNO ha elegido. {minutes} minutos mirándoos como pasmarotes. Os quedáis sin apuesta los dos, par de indecisos.",
 ];
 
 export const DUEL_NO_CHOICE_ONE: readonly string[] = [
-  "{slacker} no ha elegido en cinco minutos y pierde su apuesta de **{bet}** puntos por indeciso. {chooser} recupera la suya.",
+  "{slacker} no ha elegido en {minutes} minutos y pierde su apuesta de **{bet}** puntos por indeciso. {chooser} recupera la suya.",
 ];
 
 export const DUEL_BOT_WIN: readonly string[] = [
@@ -64,5 +64,8 @@ export const DUEL_BOT_DRAW: readonly string[] = [
 ];
 
 export const DUEL_BOT_TIMEOUT: readonly string[] = [
-  "¿Me retas a duelo y luego no eliges nada, {user}? Cinco minutos de mi vida. Increíble.",
+  "¿Me retas a duelo y luego no eliges nada, {user}? {minutes} minutos de mi vida. Increíble.",
 ];
+
+export const DUEL_RECOVERED =
+  "Me reiniciaron a mitad del duelo, nyaha~. Apuestas devueltas a quien las puso. Si aún tenéis ganas, retaos otra vez.";

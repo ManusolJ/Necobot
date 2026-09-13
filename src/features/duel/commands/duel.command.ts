@@ -1,7 +1,8 @@
 import { logger } from "@infrastructure/config/logger.config.js";
+import { BotPermissionsNotVerified } from "@infrastructure/errors/domain.errors.js";
 
 import { getGuildSettings } from "@core/services/guild.service.js";
-import { getGuildUser, isUserExcluded, sumPointsToUser } from "@core/services/user.service.js";
+import { getGuildUser, isUserExcluded, grantPointsToUser } from "@core/services/user.service.js";
 
 import type { RpsChoice } from "@shared/types/rps-choice.type.js";
 
@@ -9,9 +10,20 @@ import { pickRandom } from "@shared/utils/pick-random.util.js";
 import { EMBED_COLOR } from "@shared/consts/branding.constants.js";
 import { formatMessage } from "@shared/utils/format-message.util.js";
 import { requireGuildMember } from "@shared/utils/guild-context.util.js";
+import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
-import { RPS_CHOICES, payWinner, refundStake, reserveStake, resolveRps } from "../duel.service.js";
 import { DUEL_MAX_BET, DUEL_DEFAULT_BET, DUEL_VS_BOT_REWARD, DUEL_PHASE_TIMEOUT_MS } from "../duel.constants.js";
+import {
+  openDuel,
+  RPS_CHOICES,
+  acceptDuel,
+  cancelDuel,
+  resolveRps,
+  settleDuelWin,
+  settleDuelDraw,
+  attachDuelMessage,
+  settleDuelAbandoned,
+} from "../duel.service.js";
 import {
   DUEL_WIN,
   DUEL_DRAW,
@@ -32,10 +44,25 @@ import {
 } from "../duel.messages.js";
 
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
-import type { ButtonInteraction, ChatInputCommandInteraction, GuildMember, Message, User } from "discord.js";
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  GuildMember,
+  Message,
+  TextChannel,
+  User,
+} from "discord.js";
 
 import { Command } from "@sapphire/framework";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder, MessageFlags } from "discord.js";
+import {
+  ChannelType,
+  ButtonStyle,
+  EmbedBuilder,
+  MessageFlags,
+  ButtonBuilder,
+  ComponentType,
+  ActionRowBuilder,
+} from "discord.js";
 
 const CHOICE_ID_PREFIX = "duel-";
 const ACCEPT_ID = "duel-accept";
@@ -168,13 +195,13 @@ export class DuelCommand extends Command {
 
         const outcome = resolveRps(userChoice, botChoice);
         if (outcome === "challenger") {
-          sumPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
+          grantPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
         }
 
         const pool = { draw: DUEL_BOT_DRAW, challenger: DUEL_BOT_WIN, target: DUEL_BOT_LOSE }[outcome];
 
-        await button.update(conclude(embed, formatMessage(pickRandom(pool), replacements)));
         collector.stop(HANDLED);
+        await button.update(conclude(embed, formatMessage(pickRandom(pool), replacements)));
       });
     });
 
@@ -183,7 +210,7 @@ export class DuelCommand extends Command {
         (payload) => interaction.editReply(payload),
         embed,
         reason,
-        () => formatMessage(pickRandom(DUEL_BOT_TIMEOUT), { user: `<@${member.id}>` }),
+        () => formatMessage(pickRandom(DUEL_BOT_TIMEOUT), { user: `<@${member.id}>`, minutes: TIMEOUT_MINUTES }),
       );
     });
   }
@@ -209,24 +236,20 @@ export class DuelCommand extends Command {
       return;
     }
 
-    if (!reserveStake(guildId, challenger.id, bet)) {
-      await interaction.reply(
-        `Nyaha~ ¿retando a duelos de **${bet}** puntos sin tenerlos, ${mentions.challenger}? La confianza de los arruinados es admirable. Cancelado.`,
-      );
+    const mainChannel = await this.resolveMainChannel(interaction, guildId);
+    if (!mainChannel) {
+      await interaction.reply({
+        content: "No puedo escribir en el canal principal para enviar la invitación. Que un admin revise mis permisos.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
-    const mainChannelId = getGuildSettings(guildId)?.mainChannelId;
-    const mainChannel = mainChannelId
-      ? await this.container.client.channels.fetch(mainChannelId).catch(() => null)
-      : null;
-
-    if (!mainChannel?.isSendable()) {
-      refundStake(guildId, challenger.id, bet);
-      await interaction.reply({
-        content: "No pude acceder al canal principal para enviar la invitación. Puntos devueltos.",
-        flags: MessageFlags.Ephemeral,
-      });
+    const session = openDuel(guildId, challenger.id, target.id, bet);
+    if (!session) {
+      await interaction.reply(
+        `Nyaha~ ¿retando a duelos de **${bet}** puntos sin tenerlos, ${mentions.challenger}? La confianza de los arruinados es admirable. Cancelado.`,
+      );
       return;
     }
 
@@ -243,11 +266,20 @@ export class DuelCommand extends Command {
       new ButtonBuilder().setCustomId(DENY_ID).setLabel("Rechazar").setEmoji("🏳️").setStyle(ButtonStyle.Danger),
     );
 
-    const message = await mainChannel.send({
-      content: mentions.target,
-      embeds: [inviteEmbed],
-      components: [inviteRow],
-    });
+    let message: Message;
+
+    try {
+      message = await mainChannel.send({
+        content: mentions.target,
+        embeds: [inviteEmbed],
+        components: [inviteRow],
+      });
+    } catch (error) {
+      cancelDuel(session.id);
+      throw error;
+    }
+
+    attachDuelMessage(session.id, message.channelId, message.id);
 
     await interaction.reply({
       content: `Invitación enviada a <#${mainChannel.id}>. Tu apuesta de **${bet}** puntos queda reservada.`,
@@ -267,9 +299,9 @@ export class DuelCommand extends Command {
         }
 
         if (button.customId === DENY_ID) {
-          refundStake(guildId, challenger.id, bet);
-          await button.update(conclude(inviteEmbed, formatMessage(pickRandom(DUEL_DENIED), mentions)));
+          cancelDuel(session.id);
           inviteCollector.stop(HANDLED);
+          await button.update(conclude(inviteEmbed, formatMessage(pickRandom(DUEL_DENIED), mentions)));
           return;
         }
 
@@ -277,24 +309,30 @@ export class DuelCommand extends Command {
           return;
         }
 
-        if (!reserveStake(guildId, target.id, bet)) {
-          refundStake(guildId, challenger.id, bet);
+        if (!acceptDuel(session.id, bet)) {
+          cancelDuel(session.id);
+          inviteCollector.stop(HANDLED);
           await button.update(
             conclude(inviteEmbed, formatMessage(pickRandom(DUEL_TARGET_BROKE), { ...mentions, bet })),
           );
-          inviteCollector.stop(HANDLED);
           return;
         }
+
+        inviteCollector.stop(HANDLED);
 
         const rpsEmbed = EmbedBuilder.from(inviteEmbed).setDescription(
           `¡Duelo aceptado! ${mentions.challenger} vs ${mentions.target} por **${bet}** puntos.\n\n` +
             `Elegid vuestra arma. Tenéis ${TIMEOUT_MINUTES} minutos. El que no elija, pierde su apuesta.`,
         );
 
-        await button.update({ embeds: [rpsEmbed], components: [buildRpsRow()] });
-        inviteCollector.stop(HANDLED);
+        try {
+          await button.update({ embeds: [rpsEmbed], components: [buildRpsRow()] });
+        } catch (error) {
+          cancelDuel(session.id);
+          throw error;
+        }
 
-        this.runRpsPhase(message, rpsEmbed, guildId, challenger.id, target.id, bet);
+        this.runRpsPhase(message, rpsEmbed, session.id, guildId, challenger.id, target.id, bet);
       });
     });
 
@@ -304,7 +342,7 @@ export class DuelCommand extends Command {
         inviteEmbed,
         reason,
         () => formatMessage(pickRandom(DUEL_INVITE_TIMEOUT), { ...mentions, minutes: TIMEOUT_MINUTES }),
-        () => refundStake(guildId, challenger.id, bet),
+        () => cancelDuel(session.id),
       );
     });
   }
@@ -312,6 +350,7 @@ export class DuelCommand extends Command {
   private runRpsPhase(
     message: Message,
     baseEmbed: EmbedBuilder,
+    sessionId: number,
     guildId: string,
     challengerId: string,
     targetId: string,
@@ -352,10 +391,10 @@ export class DuelCommand extends Command {
           return;
         }
 
-        await button.update(
-          conclude(baseEmbed, this.settleDuel(guildId, challengerId, targetId, challengerChoice, targetChoice, bet)),
-        );
+        const description = this.settleDuel(sessionId, challengerId, targetId, challengerChoice, targetChoice, bet);
+
         collector.stop(HANDLED);
+        await button.update(conclude(baseEmbed, description));
       });
     });
 
@@ -364,13 +403,13 @@ export class DuelCommand extends Command {
         (payload) => message.edit(payload),
         baseEmbed,
         reason,
-        () => this.settleAbandonedDuel(guildId, duelists, choices, bet),
+        () => this.settleAbandonedDuel(sessionId, duelists, choices, bet),
       );
     });
   }
 
   private settleDuel(
-    guildId: string,
+    sessionId: number,
     challengerId: string,
     targetId: string,
     challengerChoice: RpsChoice,
@@ -380,8 +419,7 @@ export class DuelCommand extends Command {
     const outcome = resolveRps(challengerChoice, targetChoice);
 
     if (outcome === "draw") {
-      refundStake(guildId, challengerId, bet);
-      refundStake(guildId, targetId, bet);
+      settleDuelDraw(sessionId, challengerId, targetId, bet);
       return formatMessage(pickRandom(DUEL_DRAW), { a: `<@${challengerId}>`, b: `<@${targetId}>` });
     }
 
@@ -389,7 +427,7 @@ export class DuelCommand extends Command {
     const winnerId = challengerWins ? challengerId : targetId;
     const loserId = challengerWins ? targetId : challengerId;
 
-    payWinner(guildId, winnerId, bet);
+    settleDuelWin(sessionId, winnerId, bet);
 
     return formatMessage(pickRandom(DUEL_WIN), {
       winner: `<@${winnerId}>`,
@@ -401,7 +439,7 @@ export class DuelCommand extends Command {
   }
 
   private settleAbandonedDuel(
-    guildId: string,
+    sessionId: number,
     duelists: string[],
     choices: Map<string, RpsChoice>,
     bet: number,
@@ -409,18 +447,21 @@ export class DuelCommand extends Command {
     const slacker = duelists.find((id) => !choices.has(id));
     const chooser = duelists.find((id) => choices.has(id));
 
-    for (const id of duelists.filter((duelist) => choices.has(duelist))) {
-      refundStake(guildId, id, bet);
-    }
+    settleDuelAbandoned(
+      sessionId,
+      duelists.filter((duelist) => choices.has(duelist)),
+      bet,
+    );
 
     if (slacker === undefined || chooser === undefined) {
-      return pickRandom(DUEL_NO_CHOICE_BOTH);
+      return formatMessage(pickRandom(DUEL_NO_CHOICE_BOTH), { minutes: TIMEOUT_MINUTES });
     }
 
     return formatMessage(pickRandom(DUEL_NO_CHOICE_ONE), {
       slacker: `<@${slacker}>`,
       chooser: `<@${chooser}>`,
       bet,
+      minutes: TIMEOUT_MINUTES,
     });
   }
 
@@ -438,6 +479,28 @@ export class DuelCommand extends Command {
     }
 
     return undefined;
+  }
+
+  private async resolveMainChannel(
+    interaction: ChatInputCommandInteraction,
+    guildId: string,
+  ): Promise<TextChannel | undefined> {
+    const mainChannelId = getGuildSettings(guildId)?.mainChannelId;
+    if (!mainChannelId) {
+      return undefined;
+    }
+
+    const channel = await this.container.client.channels.fetch(mainChannelId).catch(() => null);
+    if (channel?.type !== ChannelType.GuildText) {
+      return undefined;
+    }
+
+    const bot = await interaction.guild?.members.fetchMe();
+    if (!bot) {
+      throw new BotPermissionsNotVerified();
+    }
+
+    return botCanSendMessagesInChannel(bot, channel) ? channel : undefined;
   }
 
   private async guardHandler(guildId: string, message: string, handler: () => Promise<void>): Promise<void> {
