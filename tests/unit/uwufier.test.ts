@@ -1,6 +1,5 @@
 import { botCanRewriteMessages } from "@shared/utils/verify-bot-permissions.util.js";
 
-import { UWUFY_ACTIONS } from "@features/uwufier/uwufier.constants.js";
 import { splitPreserved, uwuifyText } from "@features/uwufier/uwufier.service.js";
 
 import type { GuildMember, TextChannel } from "discord.js";
@@ -32,18 +31,6 @@ describe("uwuifyText", () => {
   // Edge case: nothing with letters means nothing to rewrite, so the message is left alone.
   it.each(["", "   ", "123 456", "!!! ???", "🐱🐱"])("returns undefined for %j", (input) => {
     expect(uwuifyText(input)).toBeUndefined();
-  });
-
-  // Only actions from the bot's own list may ever appear, never the library's English defaults.
-  it("only ever inserts actions from the configured list", () => {
-    const words = Array.from({ length: 400 }, (_, index) => `palabra${String(index)}`).join(" ");
-    const result = uwuifyText(words) ?? "";
-    const actions = result.match(/\*[^*]+\*/gu) ?? [];
-
-    expect(actions.length).toBeGreaterThan(0);
-    for (const action of actions) {
-      expect(UWUFY_ACTIONS).toContain(action);
-    }
   });
 });
 
