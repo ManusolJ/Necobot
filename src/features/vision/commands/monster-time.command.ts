@@ -1,5 +1,6 @@
 import { recordDrink, claimDailyDrink, releaseDailyDrink } from "@core/services/user.service.js";
 
+import type { Inspection } from "@shared/types/inspection.type.js";
 import type { VisionResult } from "@shared/types/vision-result.type.js";
 
 import { isFriday } from "@shared/utils/calendar.util.js";
@@ -19,7 +20,6 @@ import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework"
 
 import { Command } from "@sapphire/framework";
 import { AttachmentBuilder, MessageFlags } from "discord.js";
-import { Inspection } from "@shared/types/inspection.type.js";
 
 export class MonsterTimeCommand extends Command {
   public constructor(context: Command.LoaderContext, options: Command.Options) {

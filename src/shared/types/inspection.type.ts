@@ -1,5 +1,6 @@
-import { AttachmentBuilder } from "discord.js";
-import { VisionResult } from "./vision-result.type.js";
+import type { VisionResult } from "./vision-result.type.js";
+
+import type { AttachmentBuilder } from "discord.js";
 
 export type Inspection = {
   result: VisionResult;
