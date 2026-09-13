@@ -3,7 +3,7 @@ import { logger } from "@infrastructure/config/logger.config.js";
 
 import type { ChatMessage } from "@shared/types/chat-message.type.js";
 
-import { AI_MODEL_NAME, AI_GENERATION_TIMEOUT_MS } from "./ollama.constants.js";
+import { AI_MODEL_NAME, AI_KEEP_ALIVE, AI_MAX_REPLY_TOKENS, AI_GENERATION_TIMEOUT_MS } from "./ollama.constants.js";
 
 export async function requestChatCompletion(messages: ChatMessage[]): Promise<string | undefined> {
   try {
@@ -14,6 +14,9 @@ export async function requestChatCompletion(messages: ChatMessage[]): Promise<st
         model: AI_MODEL_NAME,
         messages,
         stream: false,
+        think: false,
+        keep_alive: AI_KEEP_ALIVE,
+        options: { num_predict: AI_MAX_REPLY_TOKENS },
       }),
       signal: AbortSignal.timeout(AI_GENERATION_TIMEOUT_MS),
     });

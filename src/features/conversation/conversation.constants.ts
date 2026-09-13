@@ -4,6 +4,12 @@ export const AI_HISTORY_TTL_MS = 15 * 60 * 1000;
 
 export const AI_USER_COOLDOWN_MS = 5_000;
 
+export const AI_USER_TEXT_MAX_LENGTH = 500;
+
+export const AI_MAX_IN_FLIGHT = 3;
+
 export const AI_REPLY_MAX_LENGTH = 1_900;
 
 export const AI_FALLBACK_REPLY = "Mi cerebro divino está frito ahora mismo. Prueba en un rato, plebeyo.";
+
+export const AI_BUSY_REPLY = "Estoy atendiendo a otro mortal. Ponte a la cola, plebeyo.";
