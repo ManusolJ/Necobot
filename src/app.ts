@@ -28,10 +28,9 @@ const client = new SapphireClient({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMessageReactions,
   ],
+  allowedMentions: { parse: ["users"], repliedUser: true },
   logger: {
     level: logLevel,
   },
