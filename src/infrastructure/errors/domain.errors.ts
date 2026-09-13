@@ -95,3 +95,15 @@ export class CopypastaFetchError extends AppError {
     super("copypasta_fetch_failed", { context: { subreddit } });
   }
 }
+
+export class CopypastaDeliveryError extends AppError {
+  public constructor(postId: string, channels: number) {
+    super("copypasta_delivery_failed", { context: { postId, channels } });
+  }
+}
+
+export class GameSessionPersistError extends AppError {
+  public constructor(context: { guildId: string; sessionId?: number }, cause?: unknown) {
+    super("game_session_persist_failed", { context, cause });
+  }
+}
