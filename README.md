@@ -117,8 +117,7 @@ copypasta fetch.
 > [!NOTE]
 > The chat responses are frequently incoherent and rarely useful. **This is mostly
 > intentional** - the goal was a character with a voice, not a support assistant, and a
-> bot that confidently answers wrong is funnier. The current model was chosen for its
-> Spanish within the server's resource budget and is subject to change.
+> bot that confidently answers wrong is funnier.
 
 ### Guardrails
 
