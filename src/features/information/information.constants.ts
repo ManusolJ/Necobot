@@ -61,6 +61,10 @@ export const INFO_COMMAND_GROUPS: readonly CommandGroup[] = [
         name: "birthday",
         description: "Dime tu cumpleaños y avisare cuando estemos cerca de la fecha",
       },
+      {
+        name: "book-info",
+        description: "Busca un libro y te enseña su sinopsis en tu idioma.",
+      },
     ],
   },
   {

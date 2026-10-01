@@ -13,6 +13,7 @@ export default defineConfig({
       BOT_TOKEN: "test-token",
       DATABASE_PATH: ":memory:",
       OLLAMA_URL: "http://localhost:11434",
+      GOOGLE_BOOKS_API_KEY: "test-google-books-key",
     },
     coverage: {
       include: ["src/**/*.ts"],

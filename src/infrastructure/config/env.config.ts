@@ -64,7 +64,7 @@ function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
 
       OLLAMA_URL: readUrl("OLLAMA_URL"),
 
-      GOOGLE_BOOKS_API_KEY: readUrl("GOOGLE_BOOKS_API_KEY"),
+      GOOGLE_BOOKS_API_KEY: read("GOOGLE_BOOKS_API_KEY"),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
