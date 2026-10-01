@@ -31,6 +31,8 @@ const ENVIRONMENT_SCHEMA = s.object({
   REDIS_PORT: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(65535).default(REDIS_DEFAULT_PORT),
 
   OLLAMA_URL: s.string().url().lengthGreaterThan(0),
+
+  GOOGLE_BOOKS_API_KEY: s.string().lengthGreaterThan(0),
 });
 
 const read = (name: string): string | undefined => {
@@ -61,6 +63,8 @@ function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
       REDIS_PORT: readPort("REDIS_PORT"),
 
       OLLAMA_URL: readUrl("OLLAMA_URL"),
+
+      GOOGLE_BOOKS_API_KEY: readUrl("GOOGLE_BOOKS_API_KEY"),
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
