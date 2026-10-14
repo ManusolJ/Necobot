@@ -21,8 +21,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks: [default, homelab]
     volumes:
-      - ./db/data:/app/db/data
       - ./assets:/app/assets:ro
       - model-cache:/app/.model-cache
 
@@ -43,3 +43,7 @@ services:
 volumes:
   redis-data:
   model-cache:
+
+networks:
+  homelab:
+    external: true

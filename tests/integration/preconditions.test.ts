@@ -26,12 +26,12 @@ function build<T>(Ctor: new (context: never, options: never) => T, name: string)
   return new Ctor(context as never, {} as never);
 }
 
-beforeAll(() => {
-  useMigratedDatabase();
+beforeAll(async () => {
+  await useMigratedDatabase();
 });
 
-beforeEach(() => {
-  resetDatabase();
+beforeEach(async () => {
+  await resetDatabase();
 });
 
 describe("GuildConfigured", () => {
@@ -48,14 +48,14 @@ describe("GuildConfigured", () => {
   });
 
   it("rejects a guild row that exists but never completed setup", async () => {
-    seedGuild(GUILD);
+    await seedGuild(GUILD);
 
     const result = await precondition.chatInputRun(stubInteraction(GUILD));
     expect(result.isErr()).toBe(true);
   });
 
   it("accepts a configured guild", async () => {
-    completeGuildSetup({ guildId: GUILD, mainChannelId: "chan-a" });
+    await completeGuildSetup({ guildId: GUILD, mainChannelId: "chan-a" });
 
     const result = await precondition.chatInputRun(stubInteraction(GUILD));
     expect(result.isOk()).toBe(true);
@@ -65,8 +65,8 @@ describe("GuildConfigured", () => {
 describe("NotExcluded", () => {
   const precondition = build(NotExcludedPrecondition, "NotExcluded");
 
-  beforeEach(() => {
-    seedGuild(GUILD);
+  beforeEach(async () => {
+    await seedGuild(GUILD);
   });
 
   it("accepts a user with no record", async () => {
@@ -75,30 +75,30 @@ describe("NotExcluded", () => {
   });
 
   it("accepts a known but unexcluded user", async () => {
-    sumPointsToUser(GUILD, USER, 10);
+    await sumPointsToUser(GUILD, USER, 10);
 
     const result = await precondition.chatInputRun(stubInteraction(GUILD));
     expect(result.isOk()).toBe(true);
   });
 
   it("rejects an excluded user", async () => {
-    setUserExclusion(GUILD, USER, true);
+    await setUserExclusion(GUILD, USER, true);
 
     const result = await precondition.chatInputRun(stubInteraction(GUILD));
     expect(result.isErr()).toBe(true);
   });
 
   it("accepts again after readmission", async () => {
-    setUserExclusion(GUILD, USER, true);
-    setUserExclusion(GUILD, USER, false);
+    await setUserExclusion(GUILD, USER, true);
+    await setUserExclusion(GUILD, USER, false);
 
     const result = await precondition.chatInputRun(stubInteraction(GUILD));
     expect(result.isOk()).toBe(true);
   });
 
   it("only excludes within the guild it was applied to", async () => {
-    seedGuild("guild-2");
-    setUserExclusion(GUILD, USER, true);
+    await seedGuild("guild-2");
+    await setUserExclusion(GUILD, USER, true);
 
     const result = await precondition.chatInputRun(stubInteraction("guild-2"));
     expect(result.isOk()).toBe(true);

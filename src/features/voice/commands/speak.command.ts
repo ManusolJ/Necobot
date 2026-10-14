@@ -72,7 +72,7 @@ export class SpeakCommand extends Command {
       throw new Error(`Audio file not in catalog: ${audioFile}`);
     }
 
-    const charged = subtractPointsFromUser(guildId, member.id, SPEAK_COST);
+    const charged = await subtractPointsFromUser(guildId, member.id, SPEAK_COST);
     if (!charged) {
       await interaction.reply(
         `Huh?! ¿Quieres que diga algo? ¿Qué te parece esto?: "No tienes suficientes puntos para hacerme hablar, nyahaha!" Consigue **${SPEAK_COST}** puntos y hablamos.`,
@@ -86,7 +86,7 @@ export class SpeakCommand extends Command {
       await playAudioInVoiceChannel(voiceChannel, audioPath);
     } catch (error) {
       logger.error({ err: error, guildId, audioFile }, "Failed to play audio in voice channel");
-      sumPointsToUser(guildId, member.id, SPEAK_COST);
+      await sumPointsToUser(guildId, member.id, SPEAK_COST);
       await interaction.editReply(
         `${getUserErrorMessage("voice_connection_failed")} Te he devuelto los **${SPEAK_COST}** puntos.`,
       );

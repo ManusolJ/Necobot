@@ -94,7 +94,7 @@ describe("UwufierCommand", () => {
 
   // Error handling: an excluded target is refused before the buyer is charged anything.
   it("throws for an excluded target without charging", async () => {
-    isUserExcluded.mockReturnValue(true);
+    isUserExcluded.mockResolvedValue(true);
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(TargetIsExcluded);
     expect(subtractPointsFromUser).not.toHaveBeenCalled();
@@ -103,7 +103,7 @@ describe("UwufierCommand", () => {
 
   // Edge case: a buyer who cannot pay gets a private refusal and nothing is applied.
   it("refuses privately when the buyer cannot pay", async () => {
-    subtractPointsFromUser.mockReturnValue(undefined);
+    subtractPointsFromUser.mockResolvedValue(undefined);
 
     await command.chatInputRun(stubInteraction());
 
@@ -115,9 +115,7 @@ describe("UwufierCommand", () => {
   // Error handling: the buyer has already paid, so a failed write has to return the points.
   it("refunds and rethrows when applying the debuff fails", async () => {
     const failure = new Error("db is down");
-    setUserUwufication.mockImplementation(() => {
-      throw failure;
-    });
+    setUserUwufication.mockRejectedValue(failure);
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(failure);
     expect(sumPointsToUser).toHaveBeenCalledWith(GUILD, BUYER, UWUFY_COST);
@@ -136,12 +134,8 @@ describe("UwufierCommand", () => {
   // Error handling: a broken refund must not replace the real error with a misleading one.
   it("still reports the original error when the refund itself fails", async () => {
     const failure = new Error("db is down");
-    setUserUwufication.mockImplementation(() => {
-      throw failure;
-    });
-    sumPointsToUser.mockImplementation(() => {
-      throw new Error("refund exploded");
-    });
+    setUserUwufication.mockRejectedValue(failure);
+    sumPointsToUser.mockRejectedValue(new Error("refund exploded"));
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(failure);
   });

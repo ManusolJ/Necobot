@@ -183,7 +183,7 @@ describe("MentionReplyListener", () => {
 
   // Opt-out is first-class: an excluded user gets nothing, not even the busy line.
   it("ignores excluded users", async () => {
-    isUserExcluded.mockReturnValue(true);
+    isUserExcluded.mockResolvedValue(true);
 
     await listener.run(stubMessage());
 

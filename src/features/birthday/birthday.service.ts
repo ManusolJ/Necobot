@@ -123,8 +123,23 @@ function groupByGuild(users: readonly GuildUser[]): Map<string, GuildUser[]> {
   return grouped;
 }
 
+async function keepClaimed(
+  users: readonly GuildUser[],
+  claim: (user: GuildUser) => Promise<boolean>,
+): Promise<GuildUser[]> {
+  const claimed: GuildUser[] = [];
+
+  for (const user of users) {
+    if (await claim(user)) {
+      claimed.push(user);
+    }
+  }
+
+  return claimed;
+}
+
 async function resolveMainChannel(guildId: string): Promise<SendableChannels | undefined> {
-  const mainChannelId = getGuildSettings(guildId)?.mainChannelId;
+  const mainChannelId = (await getGuildSettings(guildId))?.mainChannelId;
 
   if (!mainChannelId) {
     logger.debug({ guildId }, "Guild has no main channel configured; skipping its birthdays");
@@ -142,7 +157,9 @@ async function resolveMainChannel(guildId: string): Promise<SendableChannels | u
 }
 
 async function announceBirthdays(channel: SendableChannels, users: readonly GuildUser[], year: number): Promise<void> {
-  const claimed = users.filter((user) => claimBirthdayGift(user.guildId, user.userId, year, BIRTHDAY_GIFT_POINTS));
+  const claimed = await keepClaimed(users, (user) =>
+    claimBirthdayGift(user.guildId, user.userId, year, BIRTHDAY_GIFT_POINTS),
+  );
 
   if (claimed.length === 0) {
     return;
@@ -162,7 +179,7 @@ async function announceBirthdays(channel: SendableChannels, users: readonly Guil
 }
 
 async function announceUpcoming(channel: SendableChannels, users: readonly GuildUser[], year: number): Promise<void> {
-  const claimed = users.filter((user) => claimBirthdayWarning(user.guildId, user.userId, year));
+  const claimed = await keepClaimed(users, (user) => claimBirthdayWarning(user.guildId, user.userId, year));
 
   if (claimed.length === 0) {
     return;
@@ -183,8 +200,8 @@ export async function runBirthdaySweep(now: DateTime = nowInBotZone()): Promise<
   const today = now.startOf("day");
   const warningDay = today.plus({ days: BIRTHDAY_WARNING_DAYS });
 
-  const celebrating = groupByGuild(getUsersWithBirthday(getBirthdayKeysForDate(today)));
-  const upcoming = groupByGuild(getUsersWithBirthday(getBirthdayKeysForDate(warningDay)));
+  const celebrating = groupByGuild(await getUsersWithBirthday(getBirthdayKeysForDate(today)));
+  const upcoming = groupByGuild(await getUsersWithBirthday(getBirthdayKeysForDate(warningDay)));
 
   const guildIds = new Set([...celebrating.keys(), ...upcoming.keys()]);
 

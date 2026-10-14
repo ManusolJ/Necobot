@@ -46,8 +46,13 @@ export class AddChannelCommand extends Command {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const bot = await interaction.guild?.members.fetchMe();
-    const purpose = interaction.options.getString("purpose", true);
     const channel = interaction.options.getChannel("channel", true, [ChannelType.GuildText]);
+    const purpose = CHANNEL_PURPOSES.find((choice) => choice.value === interaction.options.getString("purpose", true));
+
+    if (!purpose) {
+      await interaction.reply({ content: "Esa función de canal no existe.", flags: MessageFlags.Ephemeral });
+      return;
+    }
 
     if (!bot) {
       throw new BotPermissionsNotVerified();
@@ -57,16 +62,14 @@ export class AddChannelCommand extends Command {
       throw new BotPermissionNotEnough(channel.id);
     }
 
-    const saved = registerGuildChannel({
+    const saved = await registerGuildChannel({
       guildId: requireGuildId(interaction),
       channelId: channel.id,
-      purpose,
+      purpose: purpose.value,
     });
 
-    const label = CHANNEL_PURPOSES.find((p) => p.value === saved.purpose)?.name ?? saved.purpose;
-
     await interaction.reply({
-      content: `Canal registrado: <#${saved.channelId}> como **${label}**.`,
+      content: `Canal registrado: <#${saved.channelId}> como **${purpose.name}**.`,
       flags: MessageFlags.Ephemeral,
     });
   }

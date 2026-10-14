@@ -1,318 +1,425 @@
 import { db } from "@infrastructure/database/client.js";
-import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
+import { userData, userState, userStats } from "@infrastructure/database/schema/user.schema.js";
 
 import type { Birthday } from "@shared/types/birthday.type.js";
 import type { GuildUser } from "@shared/types/guild-user.type.js";
-import type { GuildUserInsert } from "@shared/types/guild-user-insert.type.js";
+import type { DbExecutor } from "@shared/types/db-executor.type.js";
 import type { DailyStampColumn } from "@shared/types/daily-stamp-column.type.js";
 import type { GuildUserCounterDeltas } from "@shared/types/counter-deltas.type.js";
 
 import type { SQL } from "drizzle-orm";
+import type { PgTable, PgUpdateSetSource } from "drizzle-orm/pg-core";
 
 import { and, eq, gt, gte, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-export function findGuildUser(guildId: string, userId: string): GuildUser | undefined {
-  return db
-    .select()
-    .from(guildUsers)
-    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId)))
-    .get();
+type UserTable = typeof userData | typeof userState | typeof userStats;
+
+type RowWrite<TTable extends UserTable> = {
+  values: Omit<TTable["$inferInsert"], "guildId" | "userId">;
+  set?: PgUpdateSetSource<TTable>;
+  setWhere?: SQL;
+};
+
+type GuildUserWrite = {
+  data?: RowWrite<typeof userData> | undefined;
+  state?: RowWrite<typeof userState> | undefined;
+  stats?: RowWrite<typeof userStats> | undefined;
+};
+
+const STATS_COUNTERS = ["timesBegged", "timesSlapped", "scannedThings", "activatedMines", "monstersDrinked"] as const;
+
+const GUILD_USER_COLUMNS = {
+  guildId: userData.guildId,
+  userId: userData.userId,
+  birthdayDay: userData.birthdayDay,
+  birthdayMonth: userData.birthdayMonth,
+  birthdayCheeredYear: userData.birthdayCheeredYear,
+  birthdayWarnedYear: userData.birthdayWarnedYear,
+  excludedAt: userData.excludedAt,
+  points: userState.points,
+  isUwufied: userState.isUwufied,
+  lastBeggedAt: userState.lastBeggedAt,
+  lastDrinkedAt: userState.lastDrinkedAt,
+  historicalPoints: userStats.historicalPoints,
+  timesBegged: userStats.timesBegged,
+  timesSlapped: userStats.timesSlapped,
+  scannedThings: userStats.scannedThings,
+  activatedMines: userStats.activatedMines,
+  monstersDrinked: userStats.monstersDrinked,
+};
+
+function memberOf(table: UserTable, guildId: string, userId: string): SQL | undefined {
+  return and(eq(table.guildId, guildId), eq(table.userId, userId));
 }
 
-export function deductGuildUserPoints(guildId: string, userId: string, amount: number): GuildUser | undefined {
-  return db
-    .update(guildUsers)
-    .set({ points: sql`${guildUsers.points} - ${amount}` })
-    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId), gte(guildUsers.points, amount)))
-    .returning()
-    .get();
+function selectGuildUsers(executor: DbExecutor) {
+  return executor
+    .select(GUILD_USER_COLUMNS)
+    .from(userData)
+    .innerJoin(userState, and(eq(userState.guildId, userData.guildId), eq(userState.userId, userData.userId)))
+    .innerJoin(userStats, and(eq(userStats.guildId, userData.guildId), eq(userStats.userId, userData.userId)));
 }
 
-export function applyGuildUserDelta(input: {
-  guildId: string;
-  userId: string;
-  deltas: GuildUserCounterDeltas;
-}): GuildUser | undefined {
+async function upsertRow<TTable extends UserTable>(
+  executor: DbExecutor,
+  table: TTable,
+  guildId: string,
+  userId: string,
+  write: RowWrite<TTable> | undefined,
+): Promise<boolean> {
+  const target: PgTable = table;
+
+  if (!write) {
+    await executor.insert(target).values({ guildId, userId }).onConflictDoNothing();
+
+    return true;
+  }
+
+  const set: Record<string, unknown> = write.set ?? write.values;
+
+  const written = await executor
+    .insert(target)
+    .values({ guildId, userId, ...write.values })
+    .onConflictDoUpdate({
+      target: [table.guildId, table.userId],
+      set,
+      ...(write.setWhere ? { setWhere: write.setWhere } : {}),
+    })
+    .returning({ userId: table.userId });
+
+  return written.length > 0;
+}
+
+async function writeGuildUser(
+  guildId: string,
+  userId: string,
+  write: GuildUserWrite,
+  executor: DbExecutor,
+): Promise<GuildUser | undefined> {
+  return executor.transaction(async (tx) => {
+    const data = await upsertRow(tx, userData, guildId, userId, write.data);
+    const state = await upsertRow(tx, userState, guildId, userId, write.state);
+    const stats = await upsertRow(tx, userStats, guildId, userId, write.stats);
+
+    if (!data || !state || !stats) {
+      return undefined;
+    }
+
+    return findGuildUser(guildId, userId, tx);
+  });
+}
+
+export async function findGuildUser(
+  guildId: string,
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [row] = await selectGuildUsers(executor).where(memberOf(userData, guildId, userId));
+
+  return row;
+}
+
+export async function deductGuildUserPoints(
+  guildId: string,
+  userId: string,
+  amount: number,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [charged] = await executor
+    .update(userState)
+    .set({ points: sql`${userState.points} - ${amount}` })
+    .where(and(memberOf(userState, guildId, userId), gte(userState.points, amount)))
+    .returning({ userId: userState.userId });
+
+  return charged ? findGuildUser(guildId, userId, executor) : undefined;
+}
+
+export async function applyGuildUserDelta(
+  input: {
+    guildId: string;
+    userId: string;
+    deltas: GuildUserCounterDeltas;
+  },
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
   const { guildId, userId, deltas } = input;
 
-  const initialValues: GuildUserInsert = {
-    guildId,
-    userId,
-    ...deltas,
-    ...(deltas.points !== undefined ? { points: Math.max(0, deltas.points) } : {}),
-    ...(deltas.historicalPoints !== undefined ? { historicalPoints: Math.max(0, deltas.historicalPoints) } : {}),
-  };
+  const state: RowWrite<typeof userState> | undefined =
+    deltas.points === undefined
+      ? undefined
+      : {
+          values: { points: Math.max(0, deltas.points) },
+          set: { points: sql`${userState.points} + ${deltas.points}` },
+        };
 
-  const setClause: Record<string, unknown> = {};
-
-  if (deltas.points !== undefined) {
-    setClause.points = sql`${guildUsers.points} + ${deltas.points}`;
-  }
+  const statsValues: RowWrite<typeof userStats>["values"] = {};
+  const statsSet: PgUpdateSetSource<typeof userStats> = {};
 
   if (deltas.historicalPoints !== undefined) {
-    setClause.historicalPoints = sql`${guildUsers.historicalPoints} + ${deltas.historicalPoints}`;
+    statsValues.historicalPoints = Math.max(0, deltas.historicalPoints);
+    statsSet.historicalPoints = sql`${userStats.historicalPoints} + ${deltas.historicalPoints}`;
   }
 
-  if (deltas.timesBegged !== undefined) {
-    setClause.timesBegged = sql`${guildUsers.timesBegged} + ${deltas.timesBegged}`;
+  for (const counter of STATS_COUNTERS) {
+    const delta = deltas[counter];
+
+    if (delta !== undefined) {
+      statsValues[counter] = delta;
+      statsSet[counter] = sql`${userStats[counter]} + ${delta}`;
+    }
   }
 
-  if (deltas.activatedMines !== undefined) {
-    setClause.activatedMines = sql`${guildUsers.activatedMines} + ${deltas.activatedMines}`;
-  }
+  const stats = Object.keys(statsSet).length === 0 ? undefined : { values: statsValues, set: statsSet };
 
-  if (deltas.monstersDrinked !== undefined) {
-    setClause.monstersDrinked = sql`${guildUsers.monstersDrinked} + ${deltas.monstersDrinked}`;
-  }
-
-  if (deltas.scannedThings !== undefined) {
-    setClause.scannedThings = sql`${guildUsers.scannedThings} + ${deltas.scannedThings}`;
-  }
-
-  if (deltas.timesSlapped !== undefined) {
-    setClause.timesSlapped = sql`${guildUsers.timesSlapped} + ${deltas.timesSlapped}`;
-  }
-
-  if (Object.keys(setClause).length === 0) {
-    return (
-      db.insert(guildUsers).values(initialValues).onConflictDoNothing().returning().get() ??
-      findGuildUser(guildId, userId)
-    );
-  }
-
-  return db
-    .insert(guildUsers)
-    .values(initialValues)
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: setClause,
-    })
-    .returning()
-    .get();
+  return writeGuildUser(guildId, userId, { state, stats }, executor);
 }
 
-export function setGuildUserExclusion(guildId: string, userId: string, excludedAt: Date | null): GuildUser | undefined {
-  const updated = db
-    .insert(guildUsers)
-    .values({ guildId, userId, excludedAt })
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: { excludedAt },
-    })
-    .returning();
-
-  return updated.get();
+export async function setGuildUserExclusion(
+  guildId: string,
+  userId: string,
+  excludedAt: Date | null,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return writeGuildUser(guildId, userId, { data: { values: { excludedAt } } }, executor);
 }
 
-export function setGuildUserUwufication(
+export async function setGuildUserUwufication(
   guildId: string,
   userId: string,
   numberOfMessages: number,
-): GuildUser | undefined {
-  const updated = db
-    .insert(guildUsers)
-    .values({ guildId, userId, isUwufied: numberOfMessages })
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: { isUwufied: numberOfMessages },
-    })
-    .returning();
-
-  return updated.get();
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return writeGuildUser(guildId, userId, { state: { values: { isUwufied: numberOfMessages } } }, executor);
 }
 
-export function consumeGuildUserUwufication(guildId: string, userId: string): GuildUser | undefined {
-  return db
-    .update(guildUsers)
-    .set({ isUwufied: sql`${guildUsers.isUwufied} - 1` })
-    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId), gt(guildUsers.isUwufied, 0)))
-    .returning()
-    .get();
+export async function consumeGuildUserUwufication(
+  guildId: string,
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [consumed] = await executor
+    .update(userState)
+    .set({ isUwufied: sql`${userState.isUwufied} - 1` })
+    .where(and(memberOf(userState, guildId, userId), gt(userState.isUwufied, 0)))
+    .returning({ userId: userState.userId });
+
+  return consumed ? findGuildUser(guildId, userId, executor) : undefined;
 }
 
-export function restoreGuildUserUwufication(guildId: string, userId: string): GuildUser | undefined {
-  return db
-    .update(guildUsers)
-    .set({ isUwufied: sql`${guildUsers.isUwufied} + 1` })
-    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId)))
-    .returning()
-    .get();
+export async function restoreGuildUserUwufication(
+  guildId: string,
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [restored] = await executor
+    .update(userState)
+    .set({ isUwufied: sql`${userState.isUwufied} + 1` })
+    .where(memberOf(userState, guildId, userId))
+    .returning({ userId: userState.userId });
+
+  return restored ? findGuildUser(guildId, userId, executor) : undefined;
 }
 
-export function setGuildUserBirthday(guildId: string, userId: string, birthday: Birthday): GuildUser | undefined {
-  const updated = db
-    .insert(guildUsers)
-    .values({ guildId, userId, birthdayDay: birthday.day, birthdayMonth: birthday.month })
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: { birthdayDay: birthday.day, birthdayMonth: birthday.month },
-    })
-    .returning();
-
-  return updated.get();
+export async function setGuildUserBirthday(
+  guildId: string,
+  userId: string,
+  birthday: Birthday,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return writeGuildUser(
+    guildId,
+    userId,
+    { data: { values: { birthdayDay: birthday.day, birthdayMonth: birthday.month } } },
+    executor,
+  );
 }
 
-export function findGuildUsersByBirthday(keys: readonly Birthday[]): GuildUser[] {
+export async function findGuildUsersByBirthday(
+  keys: readonly Birthday[],
+  executor: DbExecutor = db,
+): Promise<GuildUser[]> {
   if (keys.length === 0) {
     return [];
   }
 
-  const matches = keys.map((key) => and(eq(guildUsers.birthdayDay, key.day), eq(guildUsers.birthdayMonth, key.month)));
+  const matches = keys.map((key) => and(eq(userData.birthdayDay, key.day), eq(userData.birthdayMonth, key.month)));
 
-  return db
-    .select()
-    .from(guildUsers)
-    .where(and(or(...matches), isNull(guildUsers.excludedAt)))
-    .all();
+  return selectGuildUsers(executor).where(and(or(...matches), isNull(userData.excludedAt)));
 }
 
-export function claimGuildUserBirthdayGift(
+export async function claimGuildUserBirthdayGift(
   guildId: string,
   userId: string,
   year: number,
   points: number,
-): GuildUser | undefined {
-  return db
-    .update(guildUsers)
-    .set({
-      points: sql`${guildUsers.points} + ${points}`,
-      historicalPoints: sql`${guildUsers.historicalPoints} + ${points}`,
-      birthdayCheeredYear: year,
-    })
-    .where(
-      and(
-        eq(guildUsers.guildId, guildId),
-        eq(guildUsers.userId, userId),
-        or(isNull(guildUsers.birthdayCheeredYear), ne(guildUsers.birthdayCheeredYear, year)),
-      ),
-    )
-    .returning()
-    .get();
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return executor.transaction(async (tx) => {
+    const [claimed] = await tx
+      .update(userData)
+      .set({ birthdayCheeredYear: year })
+      .where(
+        and(
+          memberOf(userData, guildId, userId),
+          or(isNull(userData.birthdayCheeredYear), ne(userData.birthdayCheeredYear, year)),
+        ),
+      )
+      .returning({ userId: userData.userId });
+
+    if (!claimed) {
+      return undefined;
+    }
+
+    await tx
+      .update(userState)
+      .set({ points: sql`${userState.points} + ${points}` })
+      .where(memberOf(userState, guildId, userId));
+
+    await tx
+      .update(userStats)
+      .set({ historicalPoints: sql`${userStats.historicalPoints} + ${points}` })
+      .where(memberOf(userStats, guildId, userId));
+
+    return findGuildUser(guildId, userId, tx);
+  });
 }
 
-export function claimGuildUserBirthdayWarning(guildId: string, userId: string, year: number): GuildUser | undefined {
-  return db
-    .update(guildUsers)
+export async function claimGuildUserBirthdayWarning(
+  guildId: string,
+  userId: string,
+  year: number,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [claimed] = await executor
+    .update(userData)
     .set({ birthdayWarnedYear: year })
     .where(
       and(
-        eq(guildUsers.guildId, guildId),
-        eq(guildUsers.userId, userId),
-        or(isNull(guildUsers.birthdayWarnedYear), ne(guildUsers.birthdayWarnedYear, year)),
+        memberOf(userData, guildId, userId),
+        or(isNull(userData.birthdayWarnedYear), ne(userData.birthdayWarnedYear, year)),
       ),
     )
-    .returning()
-    .get();
+    .returning({ userId: userData.userId });
+
+  return claimed ? findGuildUser(guildId, userId, executor) : undefined;
 }
 
 function notStampedSince(column: DailyStampColumn, since: Date): SQL {
   return sql`(${isNull(column)} OR ${lt(column, since)})`;
 }
 
-export function claimGuildUserDailyDrink(guildId: string, userId: string, startOfDay: Date): GuildUser | undefined {
-  const now = new Date();
-
-  return db
-    .insert(guildUsers)
-    .values({ guildId, userId, lastDrinkedAt: now })
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: { lastDrinkedAt: now },
-      setWhere: notStampedSince(guildUsers.lastDrinkedAt, startOfDay),
-    })
-    .returning()
-    .get();
+export async function claimGuildUserDailyDrink(
+  guildId: string,
+  userId: string,
+  startOfDay: Date,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return writeGuildUser(
+    guildId,
+    userId,
+    {
+      state: {
+        values: { lastDrinkedAt: new Date() },
+        setWhere: notStampedSince(userState.lastDrinkedAt, startOfDay),
+      },
+    },
+    executor,
+  );
 }
 
-export function setGuildUserLastDrinkedAt(guildId: string, userId: string, at: Date | null): GuildUser | undefined {
-  return db
-    .update(guildUsers)
+export async function setGuildUserLastDrinkedAt(
+  guildId: string,
+  userId: string,
+  at: Date | null,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  const [updated] = await executor
+    .update(userState)
     .set({ lastDrinkedAt: at })
-    .where(and(eq(guildUsers.guildId, guildId), eq(guildUsers.userId, userId)))
-    .returning()
-    .get();
+    .where(memberOf(userState, guildId, userId))
+    .returning({ userId: userState.userId });
+
+  return updated ? findGuildUser(guildId, userId, executor) : undefined;
 }
 
-export function claimGuildUserDailyBeg(guildId: string, userId: string, startOfDay: Date): GuildUser | undefined {
-  const now = new Date();
-
-  return db
-    .insert(guildUsers)
-    .values({ guildId, userId, lastBeggedAt: now })
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: { lastBeggedAt: now },
-      setWhere: notStampedSince(guildUsers.lastBeggedAt, startOfDay),
-    })
-    .returning()
-    .get();
+export async function claimGuildUserDailyBeg(
+  guildId: string,
+  userId: string,
+  startOfDay: Date,
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
+  return writeGuildUser(
+    guildId,
+    userId,
+    {
+      state: {
+        values: { lastBeggedAt: new Date() },
+        setWhere: notStampedSince(userState.lastBeggedAt, startOfDay),
+      },
+    },
+    executor,
+  );
 }
 
-export function recordMonsterDrink(input: {
-  guildId: string;
-  userId: string;
-  pointsDelta: number;
-}): GuildUser | undefined {
+export async function recordMonsterDrink(
+  input: {
+    guildId: string;
+    userId: string;
+    pointsDelta: number;
+  },
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
   const { guildId, userId, pointsDelta } = input;
   const now = new Date();
   const historicalGain = Math.max(0, pointsDelta);
 
-  const initialValues: GuildUserInsert = {
+  return writeGuildUser(
     guildId,
     userId,
-    points: Math.max(0, pointsDelta),
-    historicalPoints: historicalGain,
-    monstersDrinked: 1,
-    lastDrinkedAt: now,
-  };
-
-  const updated = db
-    .insert(guildUsers)
-    .values(initialValues)
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: {
-        points: sql`${guildUsers.points} + ${pointsDelta}`,
-        historicalPoints: sql`${guildUsers.historicalPoints} + ${historicalGain}`,
-        monstersDrinked: sql`${guildUsers.monstersDrinked} + 1`,
-        lastDrinkedAt: now,
+    {
+      state: {
+        values: { points: Math.max(0, pointsDelta), lastDrinkedAt: now },
+        set: { points: sql`${userState.points} + ${pointsDelta}`, lastDrinkedAt: now },
       },
-    })
-    .returning();
-
-  return updated.get();
+      stats: {
+        values: { historicalPoints: historicalGain, monstersDrinked: 1 },
+        set: {
+          historicalPoints: sql`${userStats.historicalPoints} + ${historicalGain}`,
+          monstersDrinked: sql`${userStats.monstersDrinked} + 1`,
+        },
+      },
+    },
+    executor,
+  );
 }
 
-export function recordBegAttempt(input: {
-  guildId: string;
-  userId: string;
-  pointsEarned: number;
-}): GuildUser | undefined {
+export async function recordBegAttempt(
+  input: {
+    guildId: string;
+    userId: string;
+    pointsEarned: number;
+  },
+  executor: DbExecutor = db,
+): Promise<GuildUser | undefined> {
   const { guildId, userId, pointsEarned } = input;
   const now = new Date();
 
-  const initialValues: GuildUserInsert = {
+  return writeGuildUser(
     guildId,
     userId,
-    points: pointsEarned,
-    historicalPoints: pointsEarned,
-    timesBegged: 1,
-    lastBeggedAt: now,
-  };
-
-  const updated = db
-    .insert(guildUsers)
-    .values(initialValues)
-    .onConflictDoUpdate({
-      target: [guildUsers.guildId, guildUsers.userId],
-      set: {
-        points: sql`${guildUsers.points} + ${pointsEarned}`,
-        historicalPoints: sql`${guildUsers.historicalPoints} + ${pointsEarned}`,
-        timesBegged: sql`${guildUsers.timesBegged} + 1`,
-        lastBeggedAt: now,
+    {
+      state: {
+        values: { points: pointsEarned, lastBeggedAt: now },
+        set: { points: sql`${userState.points} + ${pointsEarned}`, lastBeggedAt: now },
       },
-    })
-    .returning();
-
-  return updated.get();
+      stats: {
+        values: { historicalPoints: pointsEarned, timesBegged: 1 },
+        set: {
+          historicalPoints: sql`${userStats.historicalPoints} + ${pointsEarned}`,
+          timesBegged: sql`${userStats.timesBegged} + 1`,
+        },
+      },
+    },
+    executor,
+  );
 }

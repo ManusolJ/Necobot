@@ -39,11 +39,11 @@ export class SlapCommand extends Command {
     const target = interaction.options.getUser("user", true);
     const { guildId, member } = requireGuildMember(interaction);
 
-    if (isUserExcluded(guildId, target.id)) {
+    if (await isUserExcluded(guildId, target.id)) {
       throw new TargetIsExcluded(guildId, target.id);
     }
 
-    const charged = subtractPointsFromUser(guildId, member.id, SLAP_COST);
+    const charged = await subtractPointsFromUser(guildId, member.id, SLAP_COST);
 
     if (!charged) {
       await interaction.reply({ content: NO_POINTS_MESSAGE, flags: MessageFlags.Ephemeral });
@@ -51,7 +51,7 @@ export class SlapCommand extends Command {
     }
 
     try {
-      recordSlap(guildId, target.id);
+      await recordSlap(guildId, target.id);
 
       const resolution = pickRandom(SLAP_RESOLUTIONS);
       const attachment = new AttachmentBuilder(assetPath("img", resolution.image), { name: resolution.image });
@@ -61,7 +61,7 @@ export class SlapCommand extends Command {
         files: [attachment],
       });
     } catch (error) {
-      this.refund(guildId, member.id);
+      await this.refund(guildId, member.id);
       logger.error(
         { err: error, guildId, userId: member.id, targetId: target.id },
         "Slap failed after charging; points refunded",
@@ -70,9 +70,9 @@ export class SlapCommand extends Command {
     }
   }
 
-  private refund(guildId: string, userId: string): void {
+  private async refund(guildId: string, userId: string): Promise<void> {
     try {
-      sumPointsToUser(guildId, userId, SLAP_COST);
+      await sumPointsToUser(guildId, userId, SLAP_COST);
     } catch (error) {
       logger.error({ err: error, guildId, userId }, "Failed to refund a slap that did not go through");
     }

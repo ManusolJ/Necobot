@@ -18,5 +18,7 @@ export const DISCORD_MAX_MESSAGE_LENGTH = 2_000;
 export const REDIS_DEFAULT_PORT = 6379;
 export const REDIS_DEFAULT_HOST = "127.0.0.1";
 
-export const DATABASE_DEFAULT_PATH = "./db/data/data.sqlite";
-export const DATABASE_BUSY_TIMEOUT_MS = 5_000;
+export const DATABASE_DEFAULT_POOL_SIZE = 5;
+export const DATABASE_IDLE_TIMEOUT_MS = 30_000;
+export const DATABASE_APPLICATION_NAME = "necobot";
+export const DATABASE_CONNECTION_TIMEOUT_MS = 5_000;

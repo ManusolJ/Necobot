@@ -47,7 +47,7 @@ export class BirthdayCommand extends Command {
       return;
     }
 
-    setUserBirthday(guildId, member.id, birthday);
+    await setUserBirthday(guildId, member.id, birthday);
 
     const saved = formatMessage(BIRTHDAY_SAVED, {
       date: formatBirthday(birthday),

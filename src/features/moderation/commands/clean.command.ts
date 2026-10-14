@@ -166,7 +166,7 @@ export class CleanCommand extends Command {
   }
 
   private async resolveArchiveChannel(guildId: string, bot: GuildMember): Promise<TextChannel | undefined> {
-    const stored = getGuildChannel(guildId, ARCHIVE_CHANNEL_PURPOSE);
+    const stored = await getGuildChannel(guildId, ARCHIVE_CHANNEL_PURPOSE);
 
     if (!stored) {
       return undefined;

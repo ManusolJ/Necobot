@@ -34,7 +34,7 @@ export class BalanceCommand extends Command {
     const isPublic = interaction.options.getBoolean("public", false) ?? false;
     const { guildId, member } = requireGuildMember(interaction);
 
-    const user = getGuildUser(guildId, member.id);
+    const user = await getGuildUser(guildId, member.id);
     const points = user?.points ?? 0;
 
     const reply: InteractionReplyOptions = {

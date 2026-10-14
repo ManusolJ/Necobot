@@ -139,18 +139,17 @@ export class DuelCommand extends Command {
     edit: (payload: { embeds: EmbedBuilder[]; components: [] }) => Promise<unknown>,
     embed: EmbedBuilder,
     reason: string,
-    describe: () => string,
-    onExpire?: () => void,
+    describe: () => string | Promise<string>,
+    onExpire?: () => Promise<void>,
   ): void {
     if (reason === HANDLED) {
       return;
     }
 
-    onExpire?.();
-
-    void edit(conclude(embed, describe())).catch((error: unknown) =>
-      logger.warn({ err: error }, "Failed to edit expired duel message"),
-    );
+    void (async () => {
+      await onExpire?.();
+      await edit(conclude(embed, await describe()));
+    })().catch((error: unknown) => logger.warn({ err: error }, "Failed to expire duel message"));
   }
 
   private async runVersusBot(
@@ -195,7 +194,7 @@ export class DuelCommand extends Command {
 
         const outcome = resolveRps(userChoice, botChoice);
         if (outcome === "challenger") {
-          grantPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
+          await grantPointsToUser(guildId, member.id, DUEL_VS_BOT_REWARD);
         }
 
         const pool = { draw: DUEL_BOT_DRAW, challenger: DUEL_BOT_WIN, target: DUEL_BOT_LOSE }[outcome];
@@ -222,7 +221,7 @@ export class DuelCommand extends Command {
     target: User,
     bet: number,
   ): Promise<void> {
-    const rejection = this.rejectUnduellableTarget(guildId, challenger, target);
+    const rejection = await this.rejectUnduellableTarget(guildId, challenger, target);
     if (rejection) {
       await interaction.reply({ content: rejection, flags: MessageFlags.Ephemeral });
       return;
@@ -230,7 +229,7 @@ export class DuelCommand extends Command {
 
     const mentions = { challenger: `<@${challenger.id}>`, target: `<@${target.id}>` };
 
-    const targetPoints = getGuildUser(guildId, target.id)?.points ?? 0;
+    const targetPoints = (await getGuildUser(guildId, target.id))?.points ?? 0;
     if (targetPoints < bet) {
       await interaction.reply(formatMessage(pickRandom(DUEL_TARGET_BROKE), { ...mentions, bet }));
       return;
@@ -245,7 +244,7 @@ export class DuelCommand extends Command {
       return;
     }
 
-    const session = openDuel(guildId, challenger.id, target.id, bet);
+    const session = await openDuel(guildId, challenger.id, target.id, bet);
     if (!session) {
       await interaction.reply(
         `Nyaha~ ¿retando a duelos de **${bet}** puntos sin tenerlos, ${mentions.challenger}? La confianza de los arruinados es admirable. Cancelado.`,
@@ -275,11 +274,11 @@ export class DuelCommand extends Command {
         components: [inviteRow],
       });
     } catch (error) {
-      cancelDuel(session.id);
+      await cancelDuel(session.id);
       throw error;
     }
 
-    attachDuelMessage(session.id, message.channelId, message.id);
+    await attachDuelMessage(session.id, message.channelId, message.id);
 
     await interaction.reply({
       content: `Invitación enviada a <#${mainChannel.id}>. Tu apuesta de **${bet}** puntos queda reservada.`,
@@ -299,7 +298,7 @@ export class DuelCommand extends Command {
         }
 
         if (button.customId === DENY_ID) {
-          cancelDuel(session.id);
+          await cancelDuel(session.id);
           inviteCollector.stop(HANDLED);
           await button.update(conclude(inviteEmbed, formatMessage(pickRandom(DUEL_DENIED), mentions)));
           return;
@@ -309,8 +308,8 @@ export class DuelCommand extends Command {
           return;
         }
 
-        if (!acceptDuel(session.id, bet)) {
-          cancelDuel(session.id);
+        if (!(await acceptDuel(session.id, bet))) {
+          await cancelDuel(session.id);
           inviteCollector.stop(HANDLED);
           await button.update(
             conclude(inviteEmbed, formatMessage(pickRandom(DUEL_TARGET_BROKE), { ...mentions, bet })),
@@ -328,7 +327,7 @@ export class DuelCommand extends Command {
         try {
           await button.update({ embeds: [rpsEmbed], components: [buildRpsRow()] });
         } catch (error) {
-          cancelDuel(session.id);
+          await cancelDuel(session.id);
           throw error;
         }
 
@@ -391,7 +390,14 @@ export class DuelCommand extends Command {
           return;
         }
 
-        const description = this.settleDuel(sessionId, challengerId, targetId, challengerChoice, targetChoice, bet);
+        const description = await this.settleDuel(
+          sessionId,
+          challengerId,
+          targetId,
+          challengerChoice,
+          targetChoice,
+          bet,
+        );
 
         collector.stop(HANDLED);
         await button.update(conclude(baseEmbed, description));
@@ -408,18 +414,18 @@ export class DuelCommand extends Command {
     });
   }
 
-  private settleDuel(
+  private async settleDuel(
     sessionId: number,
     challengerId: string,
     targetId: string,
     challengerChoice: RpsChoice,
     targetChoice: RpsChoice,
     bet: number,
-  ): string {
+  ): Promise<string> {
     const outcome = resolveRps(challengerChoice, targetChoice);
 
     if (outcome === "draw") {
-      settleDuelDraw(sessionId, challengerId, targetId, bet);
+      await settleDuelDraw(sessionId, challengerId, targetId, bet);
       return formatMessage(pickRandom(DUEL_DRAW), { a: `<@${challengerId}>`, b: `<@${targetId}>` });
     }
 
@@ -427,7 +433,7 @@ export class DuelCommand extends Command {
     const winnerId = challengerWins ? challengerId : targetId;
     const loserId = challengerWins ? targetId : challengerId;
 
-    settleDuelWin(sessionId, winnerId, bet);
+    await settleDuelWin(sessionId, winnerId, bet);
 
     return formatMessage(pickRandom(DUEL_WIN), {
       winner: `<@${winnerId}>`,
@@ -438,16 +444,16 @@ export class DuelCommand extends Command {
     });
   }
 
-  private settleAbandonedDuel(
+  private async settleAbandonedDuel(
     sessionId: number,
     duelists: string[],
     choices: Map<string, RpsChoice>,
     bet: number,
-  ): string {
+  ): Promise<string> {
     const slacker = duelists.find((id) => !choices.has(id));
     const chooser = duelists.find((id) => choices.has(id));
 
-    settleDuelAbandoned(
+    await settleDuelAbandoned(
       sessionId,
       duelists.filter((duelist) => choices.has(duelist)),
       bet,
@@ -465,7 +471,11 @@ export class DuelCommand extends Command {
     });
   }
 
-  private rejectUnduellableTarget(guildId: string, challenger: GuildMember, target: User): string | undefined {
+  private async rejectUnduellableTarget(
+    guildId: string,
+    challenger: GuildMember,
+    target: User,
+  ): Promise<string | undefined> {
     if (target.bot) {
       return "Para retar a un bot, déjame el campo vacío y pelea conmigo, nyaha~.";
     }
@@ -474,7 +484,7 @@ export class DuelCommand extends Command {
       return "¿Un duelo contra ti mismo? Busca ayuda. O un rival.";
     }
 
-    if (isUserExcluded(guildId, target.id)) {
+    if (await isUserExcluded(guildId, target.id)) {
       return `<@${target.id}> está excluido de las actividades del bot. No se puede duelar con fantasmas.`;
     }
 
@@ -485,7 +495,7 @@ export class DuelCommand extends Command {
     interaction: ChatInputCommandInteraction,
     guildId: string,
   ): Promise<TextChannel | undefined> {
-    const mainChannelId = getGuildSettings(guildId)?.mainChannelId;
+    const mainChannelId = (await getGuildSettings(guildId))?.mainChannelId;
     if (!mainChannelId) {
       return undefined;
     }

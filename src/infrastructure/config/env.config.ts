@@ -3,7 +3,7 @@ import {
   DEBUG_LOG_LEVEL,
   REDIS_DEFAULT_HOST,
   REDIS_DEFAULT_PORT,
-  DATABASE_DEFAULT_PATH,
+  DATABASE_DEFAULT_POOL_SIZE,
 } from "@shared/consts/config.constants.js";
 
 import "dotenv/config";
@@ -25,7 +25,8 @@ const ENVIRONMENT_SCHEMA = s.object({
     .regex(/^\d{17,20}$/u)
     .optional(),
 
-  DATABASE_PATH: s.string().lengthGreaterThan(0).default(DATABASE_DEFAULT_PATH),
+  DATABASE_URL: s.string().url({ allowedProtocols: ["postgres:", "postgresql:"] }),
+  DATABASE_POOL_SIZE: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(20).default(DATABASE_DEFAULT_POOL_SIZE),
 
   REDIS_HOST: s.string().lengthGreaterThan(0).default(REDIS_DEFAULT_HOST),
   REDIS_PORT: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(65535).default(REDIS_DEFAULT_PORT),
@@ -40,7 +41,7 @@ const read = (name: string): string | undefined => {
   return value === undefined || value === "" ? undefined : value;
 };
 
-const readPort = (name: string): number | undefined => {
+const readNumber = (name: string): number | undefined => {
   const value = read(name);
   return value === undefined ? undefined : Number(value);
 };
@@ -57,10 +58,11 @@ function loadEnvironment(): ReturnType<typeof ENVIRONMENT_SCHEMA.parse> {
       BOT_OWNER_ID: read("BOT_OWNER_ID"),
       DISCORD_DEV_GUILD_ID: read("DISCORD_DEV_GUILD_ID"),
 
-      DATABASE_PATH: read("DATABASE_PATH"),
+      DATABASE_URL: read("DATABASE_URL"),
+      DATABASE_POOL_SIZE: readNumber("DATABASE_POOL_SIZE"),
 
       REDIS_HOST: read("REDIS_HOST"),
-      REDIS_PORT: readPort("REDIS_PORT"),
+      REDIS_PORT: readNumber("REDIS_PORT"),
 
       OLLAMA_URL: readUrl("OLLAMA_URL"),
 

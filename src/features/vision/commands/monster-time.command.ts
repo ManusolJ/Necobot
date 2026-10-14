@@ -46,7 +46,7 @@ export class MonsterTimeCommand extends Command {
 
     assertSupportedImage(attachment);
 
-    const claim = claimDailyDrink(guildId, member.id);
+    const claim = await claimDailyDrink(guildId, member.id);
 
     if (!claim) {
       await interaction.reply({
@@ -78,7 +78,7 @@ export class MonsterTimeCommand extends Command {
       const friday = isFriday();
       const amount = randomInt(MIN_POINTS_CHANGE_PER_DRINK, MAX_POINTS_CHANGE_PER_DRINK);
 
-      recordDrink(guildId, member.id, friday ? amount : -amount);
+      await recordDrink(guildId, member.id, friday ? amount : -amount);
       counted = true;
 
       await interaction.editReply({
@@ -87,7 +87,7 @@ export class MonsterTimeCommand extends Command {
       });
     } finally {
       if (!counted) {
-        releaseDailyDrink(guildId, member.id, claim.previous);
+        await releaseDailyDrink(guildId, member.id, claim.previous);
       }
     }
   }

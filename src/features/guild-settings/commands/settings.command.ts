@@ -5,8 +5,6 @@ import { completeGuildSetup } from "@core/services/guild.service.js";
 import { requireGuildId } from "@shared/utils/guild-context.util.js";
 import { botCanSendMessagesInChannel } from "@shared/utils/verify-bot-permissions.util.js";
 
-import { AVAILABLE_PREFIXES } from "../guild-settings.constants.js";
-
 import type { ChatInputCommandInteraction } from "discord.js";
 import type { ApplicationCommandRegistry, Awaitable } from "@sapphire/framework";
 
@@ -26,13 +24,6 @@ export class SettingsCommand extends Command {
             .setRequired(true)
             .addChannelTypes(ChannelType.GuildText),
         )
-        .addStringOption((option) =>
-          option
-            .setName("prefix")
-            .setDescription("El prefijo para uso de comandos legacy (Predeterminado: !)")
-            .setRequired(false)
-            .addChoices(AVAILABLE_PREFIXES),
-        )
         .addRoleOption((option) =>
           option
             .setName("role")
@@ -45,7 +36,6 @@ export class SettingsCommand extends Command {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const bot = await interaction.guild?.members.fetchMe();
-    const prefix = interaction.options.getString("prefix", false);
     const roleId = interaction.options.getRole("role", false)?.id;
     const mainChannel = interaction.options.getChannel("main_channel", true, [ChannelType.GuildText]);
 
@@ -59,15 +49,14 @@ export class SettingsCommand extends Command {
       throw new BotPermissionNotEnough(mainChannel.id);
     }
 
-    const saved = completeGuildSetup({
+    const saved = await completeGuildSetup({
       guildId: requireGuildId(interaction),
       mainChannelId: mainChannel.id,
-      prefix: prefix ?? undefined,
-      begRetryRoleId: roleId,
+      specialRoleId: roleId,
     });
 
     await interaction.reply({
-      content: `Configuración guardada. Canal principal: <#${saved.mainChannelId}>, prefijo: \`${saved.prefix}\`.`,
+      content: `Configuración guardada. Canal principal: <#${saved.mainChannelId}>.`,
       flags: MessageFlags.Ephemeral,
     });
   }

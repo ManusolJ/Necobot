@@ -1,96 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1781789131072,
-      "tag": "0000__guild_settings_table_creation",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1782820079978,
-      "tag": "0001_user_table_creation",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1782896604996,
-      "tag": "0002_add_beg_cooldown_and_retry_role",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1784129597567,
-      "tag": "0003_minefield_and_exclusions",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1786966622798,
-      "tag": "0004_drop_trivia_wins",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1787932131371,
-      "tag": "0005_add_monster_drink_stat",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1787933855417,
-      "tag": "0006_add_monster_cooldown",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1788261489293,
-      "tag": "0007_added_scanned_things_column_to_user_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1788274938616,
-      "tag": "0008_added_times_slapped_column_to_user_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1788346867155,
-      "tag": "0009_added_uwufied_column_to_user_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1788908315236,
-      "tag": "0010_copypasta_posted_history",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1789042092663,
-      "tag": "0011_add_birthday_to_user_table",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1789237273421,
-      "tag": "0012_game_sessions",
+      "version": "7",
+      "when": 1791937539216,
+      "tag": "0000_postgres_baseline",
       "breakpoints": true
     }
   ]

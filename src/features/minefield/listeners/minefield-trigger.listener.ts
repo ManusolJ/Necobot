@@ -1,7 +1,7 @@
 import { logger } from "@infrastructure/config/logger.config.js";
 
 import { isUserExcluded, recordMineHit } from "@core/services/user.service.js";
-import { getGuildSettings, restoreMine, tryConsumeMine } from "@core/services/guild.service.js";
+import { getGuildState, restoreMine, tryConsumeMine, getGuildSettings } from "@core/services/guild.service.js";
 
 import {
   MINE_TIMEOUT_MS,
@@ -27,8 +27,13 @@ export class MinefieldTriggerListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
-    const settings = getGuildSettings(message.guildId);
-    if (!settings?.mainChannelId || message.channelId !== settings.mainChannelId || settings.activeMines <= 0) {
+    const state = await getGuildState(message.guildId);
+    if (!state || state.activeMines <= 0) {
+      return;
+    }
+
+    const settings = await getGuildSettings(message.guildId);
+    if (!settings?.mainChannelId || message.channelId !== settings.mainChannelId) {
       return;
     }
 
@@ -36,11 +41,11 @@ export class MinefieldTriggerListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
-    if (isUserExcluded(message.guildId, message.author.id)) {
+    if (await isUserExcluded(message.guildId, message.author.id)) {
       return;
     }
 
-    if (!tryConsumeMine(message.guildId)) {
+    if (!(await tryConsumeMine(message.guildId))) {
       return;
     }
 
@@ -49,7 +54,7 @@ export class MinefieldTriggerListener extends Listener<typeof Events.MessageCrea
     try {
       announcement = await this.detonate(message);
     } catch (error) {
-      restoreMine(message.guildId);
+      await restoreMine(message.guildId);
       logger.error(
         { err: error, guildId: message.guildId, userId: message.author.id },
         "Failed to apply mine detonation; mine restored",
@@ -68,12 +73,12 @@ export class MinefieldTriggerListener extends Listener<typeof Events.MessageCrea
 
     if (!isAdmin && member?.moderatable) {
       await member.timeout(MINE_TIMEOUT_MS, MINE_TIMEOUT_REASON);
-      recordMineHit(message.guildId, message.author.id, MINE_NO_POINT_PENALTY);
+      await recordMineHit(message.guildId, message.author.id, MINE_NO_POINT_PENALTY);
 
       return `**BOOM.** ${member.displayName} ha pisado una mina y estará calladito ${MINE_TIMEOUT_SECONDS} segundos. Nyaha~.`;
     }
 
-    recordMineHit(message.guildId, message.author.id, MINE_ADMIN_PENALTY);
+    await recordMineHit(message.guildId, message.author.id, MINE_ADMIN_PENALTY);
 
     return `**BOOM.** <@${message.author.id}> ha pisado una mina. Como eres intocable, pagas **${MINE_ADMIN_PENALTY}** puntos. La ley es la ley.`;
   }

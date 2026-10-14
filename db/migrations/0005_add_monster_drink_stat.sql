@@ -1,1 +1,0 @@
-ALTER TABLE `guild_users` ADD `monsters_drinked` integer DEFAULT 0 NOT NULL;

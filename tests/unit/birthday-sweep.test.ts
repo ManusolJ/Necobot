@@ -122,7 +122,7 @@ describe("runBirthdaySweep", () => {
 
   // Requirement: surviving restarts means the sweep can run twice in a day.
   it("stays silent when every gift was already claimed this year", async () => {
-    claimBirthdayGift.mockReturnValue(false);
+    claimBirthdayGift.mockResolvedValue(false);
     birthdays([user({ userId: "user-1" }), user({ userId: "user-2" })]);
 
     await runBirthdaySweep(at("2026-03-15"));
@@ -131,7 +131,7 @@ describe("runBirthdaySweep", () => {
   });
 
   it("announces only the users whose gift the claim actually granted", async () => {
-    claimBirthdayGift.mockImplementation((_guild: string, userId: string) => userId === "user-2");
+    claimBirthdayGift.mockImplementation((_guild: string, userId: string) => Promise.resolve(userId === "user-2"));
     birthdays([user({ userId: "user-1" }), user({ userId: "user-2" })]);
 
     await runBirthdaySweep(at("2026-03-15"));
@@ -140,7 +140,7 @@ describe("runBirthdaySweep", () => {
   });
 
   it("gifts nobody when the guild has no main channel", async () => {
-    getGuildSettings.mockReturnValue({ guildId: "guild-1", mainChannelId: null });
+    getGuildSettings.mockResolvedValue({ guildId: "guild-1", mainChannelId: null });
     birthdays([user({ userId: "user-1" })]);
 
     await runBirthdaySweep(at("2026-03-15"));
@@ -167,7 +167,9 @@ describe("runBirthdaySweep", () => {
 
   it("sends each guild its own announcement", async () => {
     birthdays([user({ userId: "user-1" }), user({ guildId: "guild-2", userId: "user-2" })]);
-    getGuildSettings.mockImplementation((guildId: string) => ({ guildId, mainChannelId: `channel-${guildId}` }));
+    getGuildSettings.mockImplementation((guildId: string) =>
+      Promise.resolve({ guildId, mainChannelId: `channel-${guildId}` }),
+    );
 
     await runBirthdaySweep(at("2026-03-15"));
 
@@ -208,7 +210,7 @@ describe("runBirthdaySweep", () => {
   // The claim, not the snapshotted row, decides. Two overlapping sweeps both read
   // birthdayWarnedYear as null, so only the atomic claim can break the tie.
   it("stays silent when the warning was already claimed for that birthday", async () => {
-    claimBirthdayWarning.mockReturnValue(false);
+    claimBirthdayWarning.mockResolvedValue(false);
     birthdays([], [user({ userId: "user-1", birthdayWarnedYear: 2026 })]);
 
     await runBirthdaySweep(at("2026-03-15"));
@@ -217,7 +219,7 @@ describe("runBirthdaySweep", () => {
   });
 
   it("warns only the users whose claim actually succeeded", async () => {
-    claimBirthdayWarning.mockImplementation((_guild: string, userId: string) => userId === "user-2");
+    claimBirthdayWarning.mockImplementation((_guild: string, userId: string) => Promise.resolve(userId === "user-2"));
     birthdays([], [user({ userId: "user-1" }), user({ userId: "user-2" })]);
 
     await runBirthdaySweep(at("2026-03-15"));

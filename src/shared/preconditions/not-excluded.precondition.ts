@@ -22,7 +22,7 @@ export class NotExcludedPrecondition extends Precondition {
       return this.ok();
     }
 
-    return isUserExcluded(interaction.guildId, interaction.user.id)
+    return (await isUserExcluded(interaction.guildId, interaction.user.id))
       ? this.error({ message: getUserErrorMessage("user_excluded"), context: { code: "user_excluded" } })
       : this.ok();
   }

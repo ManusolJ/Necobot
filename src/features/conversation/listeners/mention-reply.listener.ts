@@ -64,7 +64,7 @@ export class MentionReplyListener extends Listener<typeof Events.MessageCreate> 
       return;
     }
 
-    if (isUserExcluded(message.guildId, message.author.id)) {
+    if (await isUserExcluded(message.guildId, message.author.id)) {
       return;
     }
 

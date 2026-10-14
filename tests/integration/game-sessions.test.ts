@@ -18,12 +18,12 @@ const CHALLENGER = "challenger-1";
 const CHALLENGED = "challenged-1";
 const STAKE = 25;
 
-function points(userId: string): number {
-  return getGuildUser(GUILD, userId)?.points ?? 0;
+async function points(userId: string): Promise<number> {
+  return (await getGuildUser(GUILD, userId))?.points ?? 0;
 }
 
-function open(): number {
-  const session = openGameSession({
+async function open(): Promise<number> {
+  const session = await openGameSession({
     guildId: GUILD,
     kind: "duel",
     challengerId: CHALLENGER,
@@ -34,23 +34,23 @@ function open(): number {
   return session!.id;
 }
 
-beforeAll(() => {
-  useMigratedDatabase();
+beforeAll(async () => {
+  await useMigratedDatabase();
 });
 
-beforeEach(() => {
-  resetDatabase();
-  seedGuild(GUILD);
-  sumPointsToUser(GUILD, CHALLENGER, 100);
-  sumPointsToUser(GUILD, CHALLENGED, 100);
+beforeEach(async () => {
+  await resetDatabase();
+  await seedGuild(GUILD);
+  await sumPointsToUser(GUILD, CHALLENGER, 100);
+  await sumPointsToUser(GUILD, CHALLENGED, 100);
 });
 
 describe("openGameSession", () => {
-  it("takes the challenger's stake and records it on the row", () => {
-    const id = open();
+  it("takes the challenger's stake and records it on the row", async () => {
+    const id = await open();
 
-    expect(points(CHALLENGER)).toBe(75);
-    expect(findGameSession(id)).toMatchObject({
+    expect(await points(CHALLENGER)).toBe(75);
+    expect(await findGameSession(id)).toMatchObject({
       kind: "duel",
       challengerId: CHALLENGER,
       challengedId: CHALLENGED,
@@ -60,8 +60,8 @@ describe("openGameSession", () => {
     });
   });
 
-  it("refuses and leaves nothing behind when the challenger cannot cover the stake", () => {
-    const session = openGameSession({
+  it("refuses and leaves nothing behind when the challenger cannot cover the stake", async () => {
+    const session = await openGameSession({
       guildId: GUILD,
       kind: "duel",
       challengerId: "broke",
@@ -70,127 +70,131 @@ describe("openGameSession", () => {
     });
 
     expect(session).toBeUndefined();
-    expect(findOpenGameSessions()).toHaveLength(0);
+    expect(await findOpenGameSessions()).toHaveLength(0);
   });
 });
 
 describe("stakeChallenged", () => {
-  it("takes the challenged player's stake once they accept", () => {
-    const id = open();
+  it("takes the challenged player's stake once they accept", async () => {
+    const id = await open();
 
-    expect(stakeChallenged(id, STAKE)).toBe(true);
-    expect(points(CHALLENGED)).toBe(75);
-    expect(findGameSession(id)?.challengedStake).toBe(STAKE);
+    expect(await stakeChallenged(id, STAKE)).toBe(true);
+    expect(await points(CHALLENGED)).toBe(75);
+    expect((await findGameSession(id))?.challengedStake).toBe(STAKE);
   });
 
-  it("refuses when the challenged player cannot cover the stake", () => {
-    const id = open();
-    sumPointsToUser(GUILD, CHALLENGED, -90);
+  it("refuses when the challenged player cannot cover the stake", async () => {
+    const id = await open();
+    await sumPointsToUser(GUILD, CHALLENGED, -90);
 
-    expect(stakeChallenged(id, STAKE)).toBe(false);
-    expect(points(CHALLENGED)).toBe(10);
-    expect(findGameSession(id)?.challengedStake).toBe(0);
+    expect(await stakeChallenged(id, STAKE)).toBe(false);
+    expect(await points(CHALLENGED)).toBe(10);
+    expect((await findGameSession(id))?.challengedStake).toBe(0);
   });
 
-  it("refuses on a closed session", () => {
-    const id = open();
-    refundGameSession(id);
+  it("refuses on a closed session", async () => {
+    const id = await open();
+    await refundGameSession(id);
 
-    expect(stakeChallenged(id, STAKE)).toBe(false);
-    expect(points(CHALLENGED)).toBe(100);
+    expect(await stakeChallenged(id, STAKE)).toBe(false);
+    expect(await points(CHALLENGED)).toBe(100);
+  });
+
+  it("refuses on a session that does not exist", async () => {
+    expect(await stakeChallenged(9_999, STAKE)).toBe(false);
   });
 });
 
 describe("settleGameSession", () => {
-  it("pays the listed users and closes the session", () => {
-    const id = open();
-    stakeChallenged(id, STAKE);
+  it("pays the listed users and closes the session", async () => {
+    const id = await open();
+    await stakeChallenged(id, STAKE);
 
-    settleGameSession(id, { [CHALLENGED]: STAKE * 2 });
+    await settleGameSession(id, { [CHALLENGED]: STAKE * 2 });
 
-    expect(points(CHALLENGER)).toBe(75);
-    expect(points(CHALLENGED)).toBe(125);
-    expect(findGameSession(id)?.completedAt).toBeInstanceOf(Date);
+    expect(await points(CHALLENGER)).toBe(75);
+    expect(await points(CHALLENGED)).toBe(125);
+    expect((await findGameSession(id))?.completedAt).toBeInstanceOf(Date);
   });
 
-  it("refuses to settle twice, so a payout cannot be duplicated", () => {
-    const id = open();
-    settleGameSession(id, { [CHALLENGER]: STAKE });
+  it("refuses to settle twice, so a payout cannot be duplicated", async () => {
+    const id = await open();
+    await settleGameSession(id, { [CHALLENGER]: STAKE });
 
-    expect(() => settleGameSession(id, { [CHALLENGER]: STAKE })).toThrow();
-    expect(points(CHALLENGER)).toBe(100);
+    await expect(settleGameSession(id, { [CHALLENGER]: STAKE })).rejects.toThrow();
+    expect(await points(CHALLENGER)).toBe(100);
   });
 });
 
 describe("refundGameSession", () => {
-  it("returns only the challenger's stake before acceptance", () => {
-    const id = open();
-    refundGameSession(id);
+  it("returns only the challenger's stake before acceptance", async () => {
+    const id = await open();
+    await refundGameSession(id);
 
-    expect(points(CHALLENGER)).toBe(100);
-    expect(points(CHALLENGED)).toBe(100);
-    expect(findOpenGameSessions()).toHaveLength(0);
+    expect(await points(CHALLENGER)).toBe(100);
+    expect(await points(CHALLENGED)).toBe(100);
+    expect(await findOpenGameSessions()).toHaveLength(0);
   });
 
-  it("returns both stakes after acceptance", () => {
-    const id = open();
-    stakeChallenged(id, STAKE);
-    refundGameSession(id);
+  it("returns both stakes after acceptance", async () => {
+    const id = await open();
+    await stakeChallenged(id, STAKE);
+    await refundGameSession(id);
 
-    expect(points(CHALLENGER)).toBe(100);
-    expect(points(CHALLENGED)).toBe(100);
+    expect(await points(CHALLENGER)).toBe(100);
+    expect(await points(CHALLENGED)).toBe(100);
   });
 
   // Every failure path calls this defensively, so a second call must be harmless.
-  it("is a no-op on an already closed session", () => {
-    const id = open();
-    refundGameSession(id);
+  it("is a no-op on an already closed session", async () => {
+    const id = await open();
+    await refundGameSession(id);
 
-    expect(refundGameSession(id)).toBeUndefined();
-    expect(points(CHALLENGER)).toBe(100);
+    expect(await refundGameSession(id)).toBeUndefined();
+    expect(await points(CHALLENGER)).toBe(100);
   });
 });
 
 describe("recoverOpenGameSessions", () => {
   // Simulates a crash: rows are left open with stakes taken, then the "next boot" recovers them.
-  it("refunds every open session and reports them with their message", () => {
-    const invited = open();
-    attachGameSessionMessage(invited, "channel-1", "message-1");
+  it("refunds every open session and reports them with their message", async () => {
+    const invited = await open();
+    await attachGameSessionMessage(invited, "channel-1", "message-1");
 
-    const accepted = openGameSession({
+    const accepted = (await openGameSession({
       guildId: GUILD,
       kind: "duel",
       challengerId: CHALLENGED,
       challengedId: CHALLENGER,
       stake: 10,
-    })!.id;
-    stakeChallenged(accepted, 10);
+    }))!.id;
+    await stakeChallenged(accepted, 10);
 
-    const recovered = recoverOpenGameSessions();
+    const recovered = await recoverOpenGameSessions();
 
     expect(recovered.map((session) => session.id).sort()).toEqual([invited, accepted].sort());
     expect(recovered.find((session) => session.id === invited)).toMatchObject({
       channelId: "channel-1",
       messageId: "message-1",
     });
-    expect(points(CHALLENGER)).toBe(100);
-    expect(points(CHALLENGED)).toBe(100);
-    expect(findOpenGameSessions()).toHaveLength(0);
+    expect(await points(CHALLENGER)).toBe(100);
+    expect(await points(CHALLENGED)).toBe(100);
+    expect(await findOpenGameSessions()).toHaveLength(0);
   });
 
-  it("leaves completed sessions alone", () => {
-    const id = open();
-    settleGameSession(id, { [CHALLENGED]: STAKE * 2 });
+  it("leaves completed sessions alone", async () => {
+    const id = await open();
+    await settleGameSession(id, { [CHALLENGED]: STAKE * 2 });
 
-    expect(recoverOpenGameSessions()).toHaveLength(0);
-    expect(points(CHALLENGED)).toBe(150);
+    expect(await recoverOpenGameSessions()).toHaveLength(0);
+    expect(await points(CHALLENGED)).toBe(150);
   });
 
-  it("is idempotent", () => {
-    open();
-    recoverOpenGameSessions();
+  it("is idempotent", async () => {
+    await open();
+    await recoverOpenGameSessions();
 
-    expect(recoverOpenGameSessions()).toHaveLength(0);
-    expect(points(CHALLENGER)).toBe(100);
+    expect(await recoverOpenGameSessions()).toHaveLength(0);
+    expect(await points(CHALLENGER)).toBe(100);
   });
 });

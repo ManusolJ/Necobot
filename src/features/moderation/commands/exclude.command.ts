@@ -38,7 +38,7 @@ export class ExcludeCommand extends Command {
     const target = interaction.options.getUser("user", true);
     const readmit = interaction.options.getBoolean("readmit", false) ?? false;
 
-    setUserExclusion(requireGuildId(interaction), target.id, !readmit);
+    await setUserExclusion(requireGuildId(interaction), target.id, !readmit);
 
     await interaction.reply({
       content: readmit

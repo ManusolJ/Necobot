@@ -1,5 +1,5 @@
-import { armMines } from "@core/services/guild.service.js";
 import { subtractPointsFromUser } from "@core/services/user.service.js";
+import { armMines, getGuildSettings } from "@core/services/guild.service.js";
 
 import { requireGuildMember } from "@shared/utils/guild-context.util.js";
 
@@ -42,7 +42,7 @@ export class MinefieldCommand extends Command {
     const cost = quantity * MINE_COST;
     const plural = quantity === 1 ? "" : "s";
 
-    const charged = subtractPointsFromUser(guildId, member.id, cost);
+    const charged = await subtractPointsFromUser(guildId, member.id, cost);
     if (!charged) {
       await interaction.reply({
         content: `Nyaha~ ¿minas sin dinero, ${member.displayName}? Necesitas **${cost}** puntos para plantar ${quantity} mina${plural}. Vuelve cuando seas solvente.`,
@@ -51,11 +51,12 @@ export class MinefieldCommand extends Command {
       return;
     }
 
-    const settings = armMines(guildId, quantity);
+    const state = await armMines(guildId, quantity);
+    const settings = await getGuildSettings(guildId);
 
     await interaction.reply(
-      `**${quantity}** mina${plural} plantada${plural} en <#${settings.mainChannelId}>. ` +
-        `Hay **${settings.activeMines}** minas activas. Te quedan **${charged.points}** puntos. Esperemos que nadie tenga mala suerte, nyaha~.`,
+      `**${quantity}** mina${plural} plantada${plural} en <#${settings?.mainChannelId}>. ` +
+        `Hay **${state.activeMines}** minas activas. Te quedan **${charged.points}** puntos. Esperemos que nadie tenga mala suerte, nyaha~.`,
     );
   }
 }

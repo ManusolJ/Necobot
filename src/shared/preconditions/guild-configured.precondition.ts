@@ -24,7 +24,7 @@ export class GuildConfiguredPrecondition extends Precondition {
       return this.error({ message: "This bot is guild-only." });
     }
 
-    const settings = getGuildSettings(interaction.guildId);
+    const settings = await getGuildSettings(interaction.guildId);
 
     if (!settings || settings.setupCompletedAt == null) {
       const err = new GuildNotConfiguredError(interaction.guildId);

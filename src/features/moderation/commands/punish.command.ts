@@ -57,7 +57,7 @@ export class PunishCommand extends Command {
         continue;
       }
 
-      const result = confiscatePointsPercent(guildId, target.id, PUNISH_PERCENT);
+      const result = await confiscatePointsPercent(guildId, target.id, PUNISH_PERCENT);
 
       lines.push(
         result

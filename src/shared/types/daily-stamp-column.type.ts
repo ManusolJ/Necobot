@@ -1,3 +1,3 @@
-import type { guildUsers } from "@infrastructure/database/schema/user.schema.js";
+import type { userState } from "@infrastructure/database/schema/user.schema.js";
 
-export type DailyStampColumn = typeof guildUsers.lastDrinkedAt | typeof guildUsers.lastBeggedAt;
+export type DailyStampColumn = typeof userState.lastDrinkedAt | typeof userState.lastBeggedAt;

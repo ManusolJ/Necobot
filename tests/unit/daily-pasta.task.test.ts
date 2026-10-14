@@ -82,7 +82,7 @@ describe("DailyPastaTask", () => {
 
   // Edge case: with nothing configured there is no reason to spend a Reddit call.
   it("does not call Reddit when no guild has a copypasta channel", async () => {
-    getChannelsByPurpose.mockReturnValue([]);
+    getChannelsByPurpose.mockResolvedValue([]);
 
     await task().run();
 
@@ -99,7 +99,7 @@ describe("DailyPastaTask", () => {
 
   // Edge case: nothing eligible is a quiet skip, not a job failure that would retry pointlessly.
   it("returns without sending when no post is eligible", async () => {
-    pickCopypasta.mockReturnValue(undefined);
+    pickCopypasta.mockResolvedValue(undefined);
 
     await task().run();
 
@@ -108,7 +108,7 @@ describe("DailyPastaTask", () => {
 
   // Every guild gets the same daily pasta, so the pick must not run once per guild.
   it("picks a single pasta for every guild", async () => {
-    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2", "guild-3"));
+    getChannelsByPurpose.mockResolvedValue(channels("guild-1", "guild-2", "guild-3"));
 
     await task().run();
 
@@ -118,7 +118,7 @@ describe("DailyPastaTask", () => {
 
   // Edge case: a deleted or invisible channel skips that guild without touching the others.
   it("skips a guild whose channel cannot be fetched", async () => {
-    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2"));
+    getChannelsByPurpose.mockResolvedValue(channels("guild-1", "guild-2"));
     fetchChannel.mockRejectedValueOnce(new Error("Unknown Channel"));
 
     await task().run();
@@ -128,7 +128,7 @@ describe("DailyPastaTask", () => {
 
   // Edge case: a voice or forum channel is not sendable and must not abort the run.
   it("skips a guild whose channel is not sendable", async () => {
-    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2"));
+    getChannelsByPurpose.mockResolvedValue(channels("guild-1", "guild-2"));
     fetchChannel.mockResolvedValueOnce({ isSendable: () => false });
 
     await task().run();
@@ -138,7 +138,7 @@ describe("DailyPastaTask", () => {
 
   // This is the regression that made a retry re-post to guilds that had already been served.
   it("keeps going when one guild's send fails", async () => {
-    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2", "guild-3"));
+    getChannelsByPurpose.mockResolvedValue(channels("guild-1", "guild-2", "guild-3"));
     send.mockRejectedValueOnce(new Error("Missing Permissions"));
 
     await task().run();
@@ -149,7 +149,7 @@ describe("DailyPastaTask", () => {
   // A partial failure is logged and swallowed: failing the job would retry and repost to the
   // guilds that were already served.
   it("does not fail the job when some sends fail", async () => {
-    getChannelsByPurpose.mockReturnValue(channels("guild-1", "guild-2"));
+    getChannelsByPurpose.mockResolvedValue(channels("guild-1", "guild-2"));
     send.mockRejectedValueOnce(new Error("Missing Permissions"));
 
     await expect(task().run()).resolves.toBeUndefined();
@@ -172,7 +172,7 @@ describe("DailyPastaTask", () => {
   });
 
   it("records nothing when no post is eligible", async () => {
-    pickCopypasta.mockReturnValue(undefined);
+    pickCopypasta.mockResolvedValue(undefined);
 
     await task().run();
 

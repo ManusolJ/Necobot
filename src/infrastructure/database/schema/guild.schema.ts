@@ -1,21 +1,28 @@
-import { text, integer, primaryKey, sqliteTable } from "drizzle-orm/sqlite-core";
+import { integer, pgEnum, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
-export const guildSettings = sqliteTable("guild_settings", {
+export const channelPurpose = pgEnum("channel_purpose", ["bot", "memes", "copypasta", "announcements", "archive"]);
+
+export const guildSettings = pgTable("guild_settings", {
   guildId: text("guild_id").primaryKey(),
   mainChannelId: text("main_channel_id"),
-  prefix: text("prefix").notNull().default("!"),
-  setupCompletedAt: integer("setup_completed_at", { mode: "timestamp" }),
-  begRetryRoleId: text("beg_retry_role_id"),
+  specialRoleId: text("special_role_id"),
+  setupCompletedAt: timestamp("setup_completed_at", { withTimezone: true }),
+});
+
+export const guildState = pgTable("guild_state", {
+  guildId: text("guild_id")
+    .primaryKey()
+    .references(() => guildSettings.guildId, { onDelete: "cascade" }),
   activeMines: integer("active_mines").notNull().default(0),
 });
 
-export const guildChannels = sqliteTable(
+export const guildChannels = pgTable(
   "guild_channels",
   {
     guildId: text("guild_id")
       .notNull()
       .references(() => guildSettings.guildId, { onDelete: "cascade" }),
-    purpose: text("purpose").notNull(),
+    purpose: channelPurpose("purpose").notNull(),
     channelId: text("channel_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.guildId, table.purpose] })],

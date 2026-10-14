@@ -1,1 +1,0 @@
-ALTER TABLE `guild_users` ADD `last_drinked_at` integer;

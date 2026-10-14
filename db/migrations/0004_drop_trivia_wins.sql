@@ -1,1 +1,0 @@
-ALTER TABLE `guild_users` DROP COLUMN `trivia_wins`;

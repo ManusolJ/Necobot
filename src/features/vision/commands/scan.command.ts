@@ -54,7 +54,7 @@ export class ScanCommand extends Command {
     const result = await analyzeImage(image);
 
     if (result.status !== "unavailable") {
-      recordScan(guildId, member.id);
+      await recordScan(guildId, member.id);
     }
 
     await interaction.editReply({

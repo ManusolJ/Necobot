@@ -1,46 +1,76 @@
 import { db } from "@infrastructure/database/client.js";
 import { gameSessions } from "@infrastructure/database/schema/game-session.schema.js";
 
+import type { DbExecutor } from "@shared/types/db-executor.type.js";
 import type { GameSession } from "@shared/types/game-session.type.js";
 import type { GameSessionInsert } from "@shared/types/game-session-insert.type.js";
 
 import { and, eq, isNull } from "drizzle-orm";
 
-export function insertGameSession(session: GameSessionInsert): GameSession | undefined {
-  return db.insert(gameSessions).values(session).returning().get();
+export async function insertGameSession(
+  session: GameSessionInsert,
+  executor: DbExecutor = db,
+): Promise<GameSession | undefined> {
+  const [row] = await executor.insert(gameSessions).values(session).returning();
+
+  return row;
 }
 
-export function findGameSession(id: number): GameSession | undefined {
-  return db.select().from(gameSessions).where(eq(gameSessions.id, id)).get();
+export async function findGameSession(id: number, executor: DbExecutor = db): Promise<GameSession | undefined> {
+  const [row] = await executor.select().from(gameSessions).where(eq(gameSessions.id, id));
+
+  return row;
 }
 
-export function findOpenGameSessions(): GameSession[] {
-  return db.select().from(gameSessions).where(isNull(gameSessions.completedAt)).all();
+export async function findGameSessionForUpdate(id: number, executor: DbExecutor): Promise<GameSession | undefined> {
+  const [row] = await executor.select().from(gameSessions).where(eq(gameSessions.id, id)).for("update");
+
+  return row;
 }
 
-export function setGameSessionChallengedStake(id: number, stake: number): GameSession | undefined {
-  return db
+export async function findOpenGameSessions(executor: DbExecutor = db): Promise<GameSession[]> {
+  return executor.select().from(gameSessions).where(isNull(gameSessions.completedAt));
+}
+
+export async function setGameSessionChallengedStake(
+  id: number,
+  stake: number,
+  executor: DbExecutor = db,
+): Promise<GameSession | undefined> {
+  const [row] = await executor
     .update(gameSessions)
     .set({ challengedStake: stake })
     .where(and(eq(gameSessions.id, id), isNull(gameSessions.completedAt)))
-    .returning()
-    .get();
+    .returning();
+
+  return row;
 }
 
-export function setGameSessionMessage(id: number, channelId: string, messageId: string): GameSession | undefined {
-  return db
+export async function setGameSessionMessage(
+  id: number,
+  channelId: string,
+  messageId: string,
+  executor: DbExecutor = db,
+): Promise<GameSession | undefined> {
+  const [row] = await executor
     .update(gameSessions)
     .set({ channelId, messageId })
     .where(and(eq(gameSessions.id, id), isNull(gameSessions.completedAt)))
-    .returning()
-    .get();
+    .returning();
+
+  return row;
 }
 
-export function completeGameSession(id: number, completedAt: Date): GameSession | undefined {
-  return db
+export async function completeGameSession(
+  id: number,
+  completedAt: Date,
+  executor: DbExecutor = db,
+): Promise<GameSession | undefined> {
+  const [row] = await executor
     .update(gameSessions)
     .set({ completedAt })
     .where(and(eq(gameSessions.id, id), isNull(gameSessions.completedAt)))
-    .returning()
-    .get();
+    .returning();
+
+  return row;
 }

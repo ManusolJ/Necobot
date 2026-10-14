@@ -25,20 +25,20 @@ import type { GuildUser } from "@shared/types/guild-user.type.js";
 
 import { nowInBotZone } from "@shared/utils/calendar.util.js";
 
-export function getGuildUser(guildId: string, userId: string): GuildUser | undefined {
+export async function getGuildUser(guildId: string, userId: string): Promise<GuildUser | undefined> {
   return findGuildUser(guildId, userId);
 }
 
-export function isUserExcluded(guildId: string, userId: string): boolean {
-  return findGuildUser(guildId, userId)?.excludedAt != null;
+export async function isUserExcluded(guildId: string, userId: string): Promise<boolean> {
+  return (await findGuildUser(guildId, userId))?.excludedAt != null;
 }
 
-export function isUserUwufied(guildId: string, userId: string): boolean {
-  return (findGuildUser(guildId, userId)?.isUwufied ?? 0) > 0;
+export async function isUserUwufied(guildId: string, userId: string): Promise<boolean> {
+  return ((await findGuildUser(guildId, userId))?.isUwufied ?? 0) > 0;
 }
 
-export function setUserExclusion(guildId: string, userId: string, excluded: boolean): GuildUser {
-  const result = setGuildUserExclusion(guildId, userId, excluded ? new Date() : null);
+export async function setUserExclusion(guildId: string, userId: string, excluded: boolean): Promise<GuildUser> {
+  const result = await setGuildUserExclusion(guildId, userId, excluded ? new Date() : null);
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -47,8 +47,12 @@ export function setUserExclusion(guildId: string, userId: string, excluded: bool
   return result;
 }
 
-export function setUserUwufication(guildId: string, userId: string, numberOfMessages: number): GuildUser {
-  const result = setGuildUserUwufication(guildId, userId, numberOfMessages);
+export async function setUserUwufication(
+  guildId: string,
+  userId: string,
+  numberOfMessages: number,
+): Promise<GuildUser> {
+  const result = await setGuildUserUwufication(guildId, userId, numberOfMessages);
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -57,16 +61,16 @@ export function setUserUwufication(guildId: string, userId: string, numberOfMess
   return result;
 }
 
-export function consumeUwufiedMessage(guildId: string, userId: string): boolean {
-  return consumeGuildUserUwufication(guildId, userId) !== undefined;
+export async function consumeUwufiedMessage(guildId: string, userId: string): Promise<boolean> {
+  return (await consumeGuildUserUwufication(guildId, userId)) !== undefined;
 }
 
-export function restoreUwufiedMessage(guildId: string, userId: string): void {
-  restoreGuildUserUwufication(guildId, userId);
+export async function restoreUwufiedMessage(guildId: string, userId: string): Promise<void> {
+  await restoreGuildUserUwufication(guildId, userId);
 }
 
-export function setUserBirthday(guildId: string, userId: string, birthday: Birthday): GuildUser {
-  const result = setGuildUserBirthday(guildId, userId, birthday);
+export async function setUserBirthday(guildId: string, userId: string, birthday: Birthday): Promise<GuildUser> {
+  const result = await setGuildUserBirthday(guildId, userId, birthday);
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -75,20 +79,25 @@ export function setUserBirthday(guildId: string, userId: string, birthday: Birth
   return result;
 }
 
-export function getUsersWithBirthday(keys: readonly Birthday[]): GuildUser[] {
+export async function getUsersWithBirthday(keys: readonly Birthday[]): Promise<GuildUser[]> {
   return findGuildUsersByBirthday(keys);
 }
 
-export function claimBirthdayGift(guildId: string, userId: string, year: number, points: number): boolean {
-  return claimGuildUserBirthdayGift(guildId, userId, year, points) !== undefined;
+export async function claimBirthdayGift(
+  guildId: string,
+  userId: string,
+  year: number,
+  points: number,
+): Promise<boolean> {
+  return (await claimGuildUserBirthdayGift(guildId, userId, year, points)) !== undefined;
 }
 
-export function claimBirthdayWarning(guildId: string, userId: string, year: number): boolean {
-  return claimGuildUserBirthdayWarning(guildId, userId, year) !== undefined;
+export async function claimBirthdayWarning(guildId: string, userId: string, year: number): Promise<boolean> {
+  return (await claimGuildUserBirthdayWarning(guildId, userId, year)) !== undefined;
 }
 
-export function recordMineHit(guildId: string, userId: string, pointPenalty: number): GuildUser {
-  const result = applyGuildUserDelta({
+export async function recordMineHit(guildId: string, userId: string, pointPenalty: number): Promise<GuildUser> {
+  const result = await applyGuildUserDelta({
     guildId,
     userId,
     deltas: {
@@ -104,8 +113,8 @@ export function recordMineHit(guildId: string, userId: string, pointPenalty: num
   return result;
 }
 
-export function recordBeg(guildId: string, userId: string, pointsEarned: number): GuildUser {
-  const result = recordBegAttempt({ guildId, userId, pointsEarned });
+export async function recordBeg(guildId: string, userId: string, pointsEarned: number): Promise<GuildUser> {
+  const result = await recordBegAttempt({ guildId, userId, pointsEarned });
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -118,27 +127,23 @@ function startOfToday(): Date {
   return nowInBotZone().startOf("day").toJSDate();
 }
 
-/**
- * Claims today's monster attempt before any slow work happens. Returns what `lastDrinkedAt` was so
- * the caller can hand the attempt back with `releaseDailyDrink` if the picture turns out not to count.
- */
-export function claimDailyDrink(guildId: string, userId: string): { previous: Date | null } | undefined {
-  const previous = findGuildUser(guildId, userId)?.lastDrinkedAt ?? null;
+export async function claimDailyDrink(guildId: string, userId: string): Promise<{ previous: Date | null } | undefined> {
+  const previous = (await findGuildUser(guildId, userId))?.lastDrinkedAt ?? null;
 
-  return claimGuildUserDailyDrink(guildId, userId, startOfToday()) ? { previous } : undefined;
+  return (await claimGuildUserDailyDrink(guildId, userId, startOfToday())) ? { previous } : undefined;
 }
 
-export function releaseDailyDrink(guildId: string, userId: string, previous: Date | null): void {
-  setGuildUserLastDrinkedAt(guildId, userId, previous);
+export async function releaseDailyDrink(guildId: string, userId: string, previous: Date | null): Promise<void> {
+  await setGuildUserLastDrinkedAt(guildId, userId, previous);
 }
 
 /** Claims today's beg attempt. False means the user already begged today. */
-export function claimDailyBeg(guildId: string, userId: string): boolean {
-  return claimGuildUserDailyBeg(guildId, userId, startOfToday()) !== undefined;
+export async function claimDailyBeg(guildId: string, userId: string): Promise<boolean> {
+  return (await claimGuildUserDailyBeg(guildId, userId, startOfToday())) !== undefined;
 }
 
-export function recordDrink(guildId: string, userId: string, pointsDelta: number): GuildUser {
-  const result = recordMonsterDrink({ guildId, userId, pointsDelta });
+export async function recordDrink(guildId: string, userId: string, pointsDelta: number): Promise<GuildUser> {
+  const result = await recordMonsterDrink({ guildId, userId, pointsDelta });
 
   if (!result) {
     throw new GuildUserPersistError(guildId, userId);
@@ -147,8 +152,8 @@ export function recordDrink(guildId: string, userId: string, pointsDelta: number
   return result;
 }
 
-export function recordScan(guildId: string, userId: string): GuildUser {
-  const result = applyGuildUserDelta({
+export async function recordScan(guildId: string, userId: string): Promise<GuildUser> {
+  const result = await applyGuildUserDelta({
     guildId,
     userId,
     deltas: {
@@ -163,8 +168,8 @@ export function recordScan(guildId: string, userId: string): GuildUser {
   return result;
 }
 
-export function recordSlap(guildId: string, userId: string): GuildUser {
-  const result = applyGuildUserDelta({
+export async function recordSlap(guildId: string, userId: string): Promise<GuildUser> {
+  const result = await applyGuildUserDelta({
     guildId,
     userId,
     deltas: {
@@ -179,23 +184,28 @@ export function recordSlap(guildId: string, userId: string): GuildUser {
   return result;
 }
 
-export function subtractPointsFromUser(guildId: string, userId: string, points: number): GuildUser | undefined {
+export async function subtractPointsFromUser(
+  guildId: string,
+  userId: string,
+  points: number,
+): Promise<GuildUser | undefined> {
   return deductGuildUserPoints(guildId, userId, points);
 }
 
-/**
- * Moves points between two users atomically. Returns the sender's updated row, or undefined when
- * they cannot cover the amount, in which case nothing was written.
- */
-export function transferPoints(guildId: string, fromId: string, toId: string, points: number): GuildUser | undefined {
-  return db.transaction(() => {
-    const charged = deductGuildUserPoints(guildId, fromId, points);
+export async function transferPoints(
+  guildId: string,
+  fromId: string,
+  toId: string,
+  points: number,
+): Promise<GuildUser | undefined> {
+  return db.transaction(async (tx) => {
+    const charged = await deductGuildUserPoints(guildId, fromId, points, tx);
 
     if (!charged) {
       return undefined;
     }
 
-    if (!applyGuildUserDelta({ guildId, userId: toId, deltas: { points } })) {
+    if (!(await applyGuildUserDelta({ guildId, userId: toId, deltas: { points } }, tx))) {
       throw new GuildUserPersistError(guildId, toId);
     }
 
@@ -203,8 +213,8 @@ export function transferPoints(guildId: string, fromId: string, toId: string, po
   });
 }
 
-export function sumPointsToUser(guildId: string, userId: string, points: number): GuildUser {
-  const result = applyGuildUserDelta({
+export async function sumPointsToUser(guildId: string, userId: string, points: number): Promise<GuildUser> {
+  const result = await applyGuildUserDelta({
     guildId,
     userId,
     deltas: { points },
@@ -217,9 +227,8 @@ export function sumPointsToUser(guildId: string, userId: string, points: number)
   return result;
 }
 
-/** A grant from the bot itself (rewards, prizes): counts towards `historicalPoints`, unlike transfers or refunds. */
-export function grantPointsToUser(guildId: string, userId: string, points: number): GuildUser {
-  const result = applyGuildUserDelta({
+export async function grantPointsToUser(guildId: string, userId: string, points: number): Promise<GuildUser> {
+  const result = await applyGuildUserDelta({
     guildId,
     userId,
     deltas: { points, historicalPoints: points },
@@ -232,12 +241,12 @@ export function grantPointsToUser(guildId: string, userId: string, points: numbe
   return result;
 }
 
-export function confiscatePointsPercent(
+export async function confiscatePointsPercent(
   guildId: string,
   userId: string,
   percent: number,
-): { taken: number; user: GuildUser } | undefined {
-  const current = findGuildUser(guildId, userId);
+): Promise<{ taken: number; user: GuildUser } | undefined> {
+  const current = await findGuildUser(guildId, userId);
   if (!current || current.points <= 0) {
     return undefined;
   }
@@ -247,7 +256,7 @@ export function confiscatePointsPercent(
     return undefined;
   }
 
-  const updated = deductGuildUserPoints(guildId, userId, taken);
+  const updated = await deductGuildUserPoints(guildId, userId, taken);
   if (!updated) {
     return undefined;
   }

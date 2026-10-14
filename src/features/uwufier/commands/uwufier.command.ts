@@ -46,11 +46,11 @@ export class UwufierCommand extends Command {
     const target = interaction.options.getUser("user", true);
     const { guildId, member } = requireGuildMember(interaction);
 
-    if (isUserExcluded(guildId, target.id)) {
+    if (await isUserExcluded(guildId, target.id)) {
       throw new TargetIsExcluded(guildId, target.id);
     }
 
-    const charged = subtractPointsFromUser(guildId, member.id, UWUFY_COST);
+    const charged = await subtractPointsFromUser(guildId, member.id, UWUFY_COST);
 
     if (!charged) {
       await interaction.reply({ content: UWUFY_NO_POINTS, flags: MessageFlags.Ephemeral });
@@ -58,7 +58,7 @@ export class UwufierCommand extends Command {
     }
 
     try {
-      setUserUwufication(guildId, target.id, UWUFY_MESSAGE_COUNT);
+      await setUserUwufication(guildId, target.id, UWUFY_MESSAGE_COUNT);
 
       await interaction.reply({
         content: formatMessage(pickRandom(UWUFY_APPLIED), {
@@ -69,7 +69,7 @@ export class UwufierCommand extends Command {
         flags: MessageFlags.Ephemeral,
       });
     } catch (error) {
-      this.refund(guildId, member.id);
+      await this.refund(guildId, member.id);
       logger.error(
         { err: error, guildId, userId: member.id, targetId: target.id },
         "Uwufication failed after charging; points refunded",
@@ -78,9 +78,9 @@ export class UwufierCommand extends Command {
     }
   }
 
-  private refund(guildId: string, userId: string): void {
+  private async refund(guildId: string, userId: string): Promise<void> {
     try {
-      sumPointsToUser(guildId, userId, UWUFY_COST);
+      await sumPointsToUser(guildId, userId, UWUFY_COST);
     } catch (error) {
       logger.error({ err: error, guildId, userId }, "Failed to refund a uwufication that did not go through");
     }

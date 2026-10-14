@@ -1,1 +1,0 @@
-ALTER TABLE `guild_users` ADD `scanned_things` integer DEFAULT 0 NOT NULL;

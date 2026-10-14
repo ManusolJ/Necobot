@@ -11,7 +11,7 @@ import "@sapphire/plugin-scheduled-tasks/register";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { GatewayIntentBits } from "discord.js";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { ApplicationCommandRegistries, RegisterBehavior, SapphireClient } from "@sapphire/framework";
 
 ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(RegisterBehavior.BulkOverwrite);
@@ -58,7 +58,7 @@ async function shutdown(signal: string): Promise<void> {
 
   try {
     await client.destroy();
-    closeDatabase();
+    await closeDatabase();
   } catch (error) {
     logger.error({ err: error }, "Shutdown did not complete cleanly");
     process.exit(1);
@@ -82,7 +82,7 @@ process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
 try {
-  migrate(db, { migrationsFolder: migrationsPath });
+  await migrate(db, { migrationsFolder: migrationsPath });
 } catch (error) {
   logger.fatal({ err: error }, "Database migration failed");
   process.exit(1);

@@ -41,7 +41,7 @@ export class BegCommand extends Command {
     const userId = member.id;
     const displayName = member.displayName;
 
-    if (!claimDailyBeg(guildId, userId)) {
+    if (!(await claimDailyBeg(guildId, userId))) {
       await interaction.reply({
         content: formatMessage(pickRandom(BEG_COOLDOWN), { user: displayName }),
         flags: MessageFlags.Ephemeral,
@@ -54,11 +54,11 @@ export class BegCommand extends Command {
       return;
     }
 
-    const retryRoleId = getGuildSettings(guildId)?.begRetryRoleId;
+    const retryRoleId = (await getGuildSettings(guildId))?.specialRoleId;
     const hasRetryRole = Boolean(retryRoleId && member.roles.cache.has(retryRoleId));
 
     if (!hasRetryRole) {
-      recordBeg(guildId, userId, NO_REWARD);
+      await recordBeg(guildId, userId, NO_REWARD);
       await interaction.reply(formatMessage(pickRandom(BEG_FAIL), { user: displayName }));
       return;
     }
@@ -70,7 +70,7 @@ export class BegCommand extends Command {
       return;
     }
 
-    recordBeg(guildId, userId, NO_REWARD);
+    await recordBeg(guildId, userId, NO_REWARD);
 
     await interaction.followUp(formatMessage(pickRandom(BEG_FAIL), { user: displayName }));
   }
@@ -84,7 +84,7 @@ export class BegCommand extends Command {
   ): Promise<void> {
     const amount = randomInt(BEG_MINIMUM_REWARD, BEG_MAXIMUM_REWARD);
 
-    recordBeg(guildId, userId, amount);
+    await recordBeg(guildId, userId, amount);
 
     const content = formatMessage(pickRandom(BEG_SUCCESS), { user: displayName, amount });
 

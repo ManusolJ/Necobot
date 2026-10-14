@@ -12,8 +12,8 @@ function cleanBody(selftext: string): string {
   return selftext.replace(/\^\(.*?\)\s?/gu, "").trim();
 }
 
-export function pickCopypasta(posts: RedditPost[]): RedditPost | undefined {
-  const recentPostIds = new Set(getPostedCopypastaIds(new Date(Date.now() - COPYPASTA_MEMORY_DAYS * DAY_MS)));
+export async function pickCopypasta(posts: RedditPost[]): Promise<RedditPost | undefined> {
+  const recentPostIds = new Set(await getPostedCopypastaIds(new Date(Date.now() - COPYPASTA_MEMORY_DAYS * DAY_MS)));
 
   const eligible = posts
     .map((post) => ({ ...post, selftext: cleanBody(post.selftext) }))

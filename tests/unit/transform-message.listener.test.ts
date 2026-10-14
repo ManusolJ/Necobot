@@ -142,7 +142,7 @@ describe("TransformMessageListener", () => {
 
   // Opt-out is first-class here: an excluded user's messages are never rewritten.
   it("ignores an excluded user", async () => {
-    isUserExcluded.mockReturnValue(true);
+    isUserExcluded.mockResolvedValue(true);
 
     await listener.run(stubMessage());
 
@@ -151,7 +151,7 @@ describe("TransformMessageListener", () => {
 
   // The debuff is targeted and paid for, so an untargeted user is never touched.
   it("ignores a user with no uwufied messages pending", async () => {
-    isUserUwufied.mockReturnValue(false);
+    isUserUwufied.mockResolvedValue(false);
 
     await listener.run(stubMessage());
 
@@ -187,7 +187,7 @@ describe("TransformMessageListener", () => {
   // Regression: a burst of messages used to all pass one stale "is uwufied" read. Now the atomic
   // decrement decides, so a message that loses that race is left alone.
   it("leaves the message alone when the decrement loses the race", async () => {
-    consumeUwufiedMessage.mockReturnValue(false);
+    consumeUwufiedMessage.mockResolvedValue(false);
 
     await listener.run(stubMessage());
 

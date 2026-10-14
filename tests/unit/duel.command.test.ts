@@ -136,7 +136,7 @@ describe("DuelCommand versus a user", () => {
   });
 
   it("cancels before sending anything when the target cannot cover the bet", async () => {
-    getGuildUser.mockReturnValue({ points: DUEL_DEFAULT_BET - 1 });
+    getGuildUser.mockResolvedValue({ points: DUEL_DEFAULT_BET - 1 });
 
     await command.chatInputRun(stubInteraction());
 
@@ -145,7 +145,7 @@ describe("DuelCommand versus a user", () => {
   });
 
   it("cancels when the challenger cannot cover the bet", async () => {
-    openDuel.mockReturnValue(undefined);
+    openDuel.mockResolvedValue(undefined);
 
     await command.chatInputRun(stubInteraction());
 
@@ -154,7 +154,7 @@ describe("DuelCommand versus a user", () => {
   });
 
   it("refuses an excluded target without touching any stake", async () => {
-    isUserExcluded.mockReturnValue(true);
+    isUserExcluded.mockResolvedValue(true);
 
     await command.chatInputRun(stubInteraction());
 

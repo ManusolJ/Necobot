@@ -1,11 +1,6 @@
-export const AVAILABLE_PREFIXES = [
-  { name: "!", value: "!" },
-  { name: "?", value: "?" },
-  { name: ">", value: ">" },
-  { name: ".", value: "." },
-];
+import type { ChannelPurpose } from "@shared/types/channel-purpose.type.js";
 
-export const CHANNEL_PURPOSES = [
+export const CHANNEL_PURPOSES: { name: string; value: ChannelPurpose }[] = [
   { name: "Canal del Bot", value: "bot" },
   { name: "Canal de Memes", value: "memes" },
   { name: "Canal de Copypastas", value: "copypasta" },

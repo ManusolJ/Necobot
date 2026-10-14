@@ -132,7 +132,7 @@ describe("SlapCommand", () => {
 
   // Error handling: an excluded target is rejected before the slapper is charged anything.
   it("throws for an excluded target without charging", async () => {
-    isUserExcluded.mockReturnValue(true);
+    isUserExcluded.mockResolvedValue(true);
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(TargetIsExcluded);
     expect(subtractPointsFromUser).not.toHaveBeenCalled();
@@ -141,7 +141,7 @@ describe("SlapCommand", () => {
 
   // Edge case: a slapper who cannot pay gets a private refusal, and nothing is recorded.
   it("refuses privately when the slapper cannot pay", async () => {
-    subtractPointsFromUser.mockReturnValue(undefined);
+    subtractPointsFromUser.mockResolvedValue(undefined);
 
     await command.chatInputRun(stubInteraction());
 
@@ -162,9 +162,7 @@ describe("SlapCommand", () => {
   // Error handling: a failed write also refunds, and must not leave a half-sent reply behind.
   it("refunds and rethrows when recording fails", async () => {
     const failure = new Error("db is down");
-    recordSlap.mockImplementation(() => {
-      throw failure;
-    });
+    recordSlap.mockRejectedValue(failure);
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(failure);
     expect(sumPointsToUser).toHaveBeenCalledWith(GUILD, SLAPPER, SLAP_COST);
@@ -175,9 +173,7 @@ describe("SlapCommand", () => {
   it("still reports the original error when the refund itself fails", async () => {
     const failure = new Error("discord is down");
     reply.mockRejectedValue(failure);
-    sumPointsToUser.mockImplementation(() => {
-      throw new Error("refund exploded");
-    });
+    sumPointsToUser.mockRejectedValue(new Error("refund exploded"));
 
     await expect(command.chatInputRun(stubInteraction())).rejects.toThrow(failure);
   });

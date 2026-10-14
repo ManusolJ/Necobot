@@ -25,7 +25,7 @@ export class ProfileCommand extends Command {
 
   public override async chatInputRun(interaction: ChatInputCommandInteraction): Promise<void> {
     const { guildId, member } = requireGuildMember(interaction);
-    const user = getGuildUser(guildId, member.id);
+    const user = await getGuildUser(guildId, member.id);
 
     const embed = new EmbedBuilder()
       .setColor(EMBED_COLOR)

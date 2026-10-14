@@ -20,7 +20,7 @@ export class GameRecoveryListener extends Listener<typeof Events.ClientReady> {
     let recovered: GameSession[];
 
     try {
-      recovered = recoverOpenGameSessions();
+      recovered = await recoverOpenGameSessions();
     } catch (error) {
       logger.error({ err: error }, "Failed to refund game sessions left open by a previous process");
       return;

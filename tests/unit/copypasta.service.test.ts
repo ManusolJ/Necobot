@@ -30,63 +30,63 @@ function post(overrides: Partial<RedditPost> = {}): RedditPost {
 }
 
 beforeEach(() => {
-  getPostedCopypastaIds.mockReturnValue([]);
+  getPostedCopypastaIds.mockResolvedValue([]);
   markCopypastaPosted.mockReset();
 });
 
 describe("pickCopypasta", () => {
   // Normal case: an eligible post comes back ready to format.
-  it("picks an eligible post", () => {
-    expect(pickCopypasta([post()])?.id).toBe("a1");
+  it("picks an eligible post", async () => {
+    expect((await pickCopypasta([post()]))?.id).toBe("a1");
   });
 
   // Edge case: nothing to choose from must read as no pasta rather than throwing.
-  it("returns undefined for an empty listing", () => {
-    expect(pickCopypasta([])).toBeUndefined();
+  it("returns undefined for an empty listing", async () => {
+    expect(await pickCopypasta([])).toBeUndefined();
   });
 
   // Edge case: one-liners are not copypastas, so anything under the floor is ignored.
-  it("ignores posts shorter than the minimum length", () => {
-    expect(pickCopypasta([post({ selftext: "corto" })])).toBeUndefined();
+  it("ignores posts shorter than the minimum length", async () => {
+    expect(await pickCopypasta([post({ selftext: "corto" })])).toBeUndefined();
   });
 
   // Edge case: link posts have no body at all and must never be picked.
-  it("ignores posts with no body", () => {
-    expect(pickCopypasta([post({ selftext: "" })])).toBeUndefined();
+  it("ignores posts with no body", async () => {
+    expect(await pickCopypasta([post({ selftext: "" })])).toBeUndefined();
   });
 
   // Normal case: Reddit superscript markup renders as literal ^(...) in Discord, so it is stripped.
-  it("strips reddit superscript markup from the body", () => {
+  it("strips reddit superscript markup from the body", async () => {
     const body = `^(editado) ${"a".repeat(COPYPASTA_MIN_LENGTH + 50)}`;
 
-    expect(pickCopypasta([post({ selftext: body })])?.selftext).toBe("a".repeat(COPYPASTA_MIN_LENGTH + 50));
+    expect((await pickCopypasta([post({ selftext: body })]))?.selftext).toBe("a".repeat(COPYPASTA_MIN_LENGTH + 50));
   });
 
   // Edge case: markup must be counted out before the length check, not after.
-  it("measures length after stripping markup", () => {
+  it("measures length after stripping markup", async () => {
     const body = `${"^(nota) ".repeat(20)}${"a".repeat(COPYPASTA_MIN_LENGTH - 10)}`;
 
-    expect(pickCopypasta([post({ selftext: body })])).toBeUndefined();
+    expect(await pickCopypasta([post({ selftext: body })])).toBeUndefined();
   });
 
   // Normal case: the same pasta must not come back while it is still in the retention window.
-  it("does not pick a post that is already in the posted history", () => {
-    getPostedCopypastaIds.mockReturnValue(["a1"]);
+  it("does not pick a post that is already in the posted history", async () => {
+    getPostedCopypastaIds.mockResolvedValue(["a1"]);
 
-    expect(pickCopypasta([post()])).toBeUndefined();
+    expect(await pickCopypasta([post()])).toBeUndefined();
   });
 
   // Picking is not posting: the history is written by the task once something was delivered,
   // otherwise a pick that never reached a channel would be burned for the retention window.
-  it("does not record the post it picked", () => {
-    pickCopypasta([post()]);
+  it("does not record the post it picked", async () => {
+    await pickCopypasta([post()]);
 
     expect(markCopypastaPosted).not.toHaveBeenCalled();
   });
 
   // This is what keeps the dedup window bounded by age instead of by a count that can deadlock.
-  it("only considers history inside the retention window", () => {
-    pickCopypasta([post()]);
+  it("only considers history inside the retention window", async () => {
+    await pickCopypasta([post()]);
 
     const since = getPostedCopypastaIds.mock.calls[0]?.[0] as Date;
     const days = (Date.now() - since.getTime()) / (24 * 60 * 60 * 1_000);
@@ -95,8 +95,8 @@ describe("pickCopypasta", () => {
   });
 
   // Normal case: a pasta that fits in one message is preferred over one that needs truncating.
-  it("prefers a post that fits over one that would be truncated", () => {
-    const chosen = pickCopypasta([
+  it("prefers a post that fits over one that would be truncated", async () => {
+    const chosen = await pickCopypasta([
       post({ id: "long", selftext: "a".repeat(COPYPASTA_MAX_LENGTH + 100) }),
       post({ id: "short" }),
     ]);
@@ -105,8 +105,8 @@ describe("pickCopypasta", () => {
   });
 
   // Edge case: when every candidate is over-long, posting a truncated pasta beats posting nothing.
-  it("falls back to an over-long post when nothing fits", () => {
-    const chosen = pickCopypasta([post({ id: "long", selftext: "a".repeat(COPYPASTA_MAX_LENGTH + 100) })]);
+  it("falls back to an over-long post when nothing fits", async () => {
+    const chosen = await pickCopypasta([post({ id: "long", selftext: "a".repeat(COPYPASTA_MAX_LENGTH + 100) })]);
 
     expect(chosen?.id).toBe("long");
   });

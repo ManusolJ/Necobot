@@ -8,44 +8,49 @@ import {
   completeGameSession,
   findOpenGameSessions,
   setGameSessionMessage,
+  findGameSessionForUpdate,
   setGameSessionChallengedStake,
 } from "@core/repositories/game-session.repository.js";
 
 import type { GameKind } from "@shared/types/game-kind.type.js";
+import type { DbExecutor } from "@shared/types/db-executor.type.js";
 import type { GameSession } from "@shared/types/game-session.type.js";
 
-function credit(guildId: string, userId: string, points: number): void {
+async function credit(guildId: string, userId: string, points: number, executor: DbExecutor): Promise<void> {
   if (points <= 0) {
     return;
   }
 
-  if (!applyGuildUserDelta({ guildId, userId, deltas: { points } })) {
+  if (!(await applyGuildUserDelta({ guildId, userId, deltas: { points } }, executor))) {
     throw new GameSessionPersistError({ guildId });
   }
 }
 
-export function openGameSession(input: {
+export async function openGameSession(input: {
   guildId: string;
   kind: GameKind;
   challengerId: string;
   challengedId?: string;
   stake: number;
-}): GameSession | undefined {
+}): Promise<GameSession | undefined> {
   const { guildId, kind, challengerId, challengedId, stake } = input;
 
-  return db.transaction(() => {
-    if (!deductGuildUserPoints(guildId, challengerId, stake)) {
+  return db.transaction(async (tx) => {
+    if (!(await deductGuildUserPoints(guildId, challengerId, stake, tx))) {
       return undefined;
     }
 
-    const session = insertGameSession({
-      guildId,
-      kind,
-      challengerId,
-      challengedId: challengedId ?? null,
-      challengerStake: stake,
-      createdAt: new Date(),
-    });
+    const session = await insertGameSession(
+      {
+        guildId,
+        kind,
+        challengerId,
+        challengedId: challengedId ?? null,
+        challengerStake: stake,
+        createdAt: new Date(),
+      },
+      tx,
+    );
 
     if (!session) {
       throw new GameSessionPersistError({ guildId });
@@ -55,19 +60,19 @@ export function openGameSession(input: {
   });
 }
 
-export function stakeChallenged(sessionId: number, stake: number): boolean {
-  return db.transaction(() => {
-    const session = findGameSession(sessionId);
+export async function stakeChallenged(sessionId: number, stake: number): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const session = await findGameSessionForUpdate(sessionId, tx);
 
     if (!session?.challengedId || session.completedAt !== null) {
       return false;
     }
 
-    if (!deductGuildUserPoints(session.guildId, session.challengedId, stake)) {
+    if (!(await deductGuildUserPoints(session.guildId, session.challengedId, stake, tx))) {
       return false;
     }
 
-    if (!setGameSessionChallengedStake(sessionId, stake)) {
+    if (!(await setGameSessionChallengedStake(sessionId, stake, tx))) {
       throw new GameSessionPersistError({ guildId: session.guildId, sessionId });
     }
 
@@ -75,20 +80,20 @@ export function stakeChallenged(sessionId: number, stake: number): boolean {
   });
 }
 
-export function attachGameSessionMessage(sessionId: number, channelId: string, messageId: string): void {
-  setGameSessionMessage(sessionId, channelId, messageId);
+export async function attachGameSessionMessage(sessionId: number, channelId: string, messageId: string): Promise<void> {
+  await setGameSessionMessage(sessionId, channelId, messageId);
 }
 
-export function settleGameSession(sessionId: number, payouts: Record<string, number>): GameSession {
-  return db.transaction(() => {
-    const session = completeGameSession(sessionId, new Date());
+export async function settleGameSession(sessionId: number, payouts: Record<string, number>): Promise<GameSession> {
+  return db.transaction(async (tx) => {
+    const session = await completeGameSession(sessionId, new Date(), tx);
 
     if (!session) {
       throw new GameSessionPersistError({ guildId: "unknown", sessionId });
     }
 
     for (const [userId, points] of Object.entries(payouts)) {
-      credit(session.guildId, userId, points);
+      await credit(session.guildId, userId, points, tx);
     }
 
     return session;
@@ -105,8 +110,8 @@ function refundPayouts(session: GameSession): Record<string, number> {
   return payouts;
 }
 
-export function refundGameSession(sessionId: number): GameSession | undefined {
-  const session = findGameSession(sessionId);
+export async function refundGameSession(sessionId: number): Promise<GameSession | undefined> {
+  const session = await findGameSession(sessionId);
 
   if (!session || session.completedAt !== null) {
     return undefined;
@@ -115,6 +120,12 @@ export function refundGameSession(sessionId: number): GameSession | undefined {
   return settleGameSession(sessionId, refundPayouts(session));
 }
 
-export function recoverOpenGameSessions(): GameSession[] {
-  return findOpenGameSessions().map((session) => settleGameSession(session.id, refundPayouts(session)));
+export async function recoverOpenGameSessions(): Promise<GameSession[]> {
+  const recovered: GameSession[] = [];
+
+  for (const session of await findOpenGameSessions()) {
+    recovered.push(await settleGameSession(session.id, refundPayouts(session)));
+  }
+
+  return recovered;
 }

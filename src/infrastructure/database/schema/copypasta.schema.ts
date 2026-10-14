@@ -1,6 +1,6 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export const copypastaPosts = sqliteTable("copypasta_posts", {
+export const copypastaPosts = pgTable("copypasta_posts", {
   postId: text("post_id").primaryKey(),
-  postedAt: integer("posted_at", { mode: "timestamp" }).notNull(),
+  postedAt: timestamp("posted_at", { withTimezone: true }).notNull(),
 });

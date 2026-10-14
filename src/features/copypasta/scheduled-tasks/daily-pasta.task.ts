@@ -43,7 +43,7 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
   }
 
   public override async run(): Promise<void> {
-    const channels = getChannelsByPurpose(COPYPASTA_CHANNEL_PURPOSE);
+    const channels = await getChannelsByPurpose(COPYPASTA_CHANNEL_PURPOSE);
 
     if (channels.length === 0) {
       logger.debug("No guild has a copypasta channel configured; skipping the daily pasta");
@@ -56,7 +56,7 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
       throw new CopypastaFetchError(COPYPASTA_SUBREDDIT);
     }
 
-    const post = pickCopypasta(posts);
+    const post = await pickCopypasta(posts);
 
     if (!post) {
       logger.warn(
@@ -89,6 +89,6 @@ export class DailyPastaTask extends ScheduledTask<"dailyPasta"> {
       throw new CopypastaDeliveryError(post.id, channels.length);
     }
 
-    markCopypastaPosted(post.id);
+    await markCopypastaPosted(post.id);
   }
 }

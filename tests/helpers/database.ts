@@ -1,28 +1,23 @@
-import { db } from "@infrastructure/database/client.js";
-import { guildUsers } from "@infrastructure/database/schema/user.schema.js";
-import { gameSessions } from "@infrastructure/database/schema/game-session.schema.js";
-import { guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
+import { guildState, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
 
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { db } from "./pglite-client.js";
 
-let migrated = false;
+import { sql } from "drizzle-orm";
+import { migrate } from "drizzle-orm/pglite/migrator";
 
-export function useMigratedDatabase(): void {
-  if (!migrated) {
-    migrate(db, { migrationsFolder: "./db/migrations" });
-    migrated = true;
-  }
+let migrated: Promise<void> | undefined;
+
+export async function useMigratedDatabase(): Promise<void> {
+  migrated ??= migrate(db, { migrationsFolder: "./db/migrations" });
+
+  await migrated;
 }
 
-export function resetDatabase(): void {
-  db.delete(gameSessions).run();
-  db.delete(guildUsers).run();
-  db.delete(guildChannels).run();
-  db.delete(guildSettings).run();
+export async function resetDatabase(): Promise<void> {
+  await db.execute(sql`TRUNCATE guild_settings, copypasta_posts RESTART IDENTITY CASCADE`);
 }
 
-export function seedGuild(guildId: string, overrides: { mainChannelId?: string; prefix?: string } = {}): void {
-  db.insert(guildSettings)
-    .values({ guildId, mainChannelId: overrides.mainChannelId ?? "main-channel", ...overrides })
-    .run();
+export async function seedGuild(guildId: string, overrides: { mainChannelId?: string } = {}): Promise<void> {
+  await db.insert(guildSettings).values({ guildId, mainChannelId: overrides.mainChannelId ?? "main-channel" });
+  await db.insert(guildState).values({ guildId });
 }

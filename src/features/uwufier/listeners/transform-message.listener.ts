@@ -34,11 +34,11 @@ export class TransformMessageListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
-    if (!isUserUwufied(message.guildId, message.author.id)) {
+    if (!(await isUserUwufied(message.guildId, message.author.id))) {
       return;
     }
 
-    if (isUserExcluded(message.guildId, message.author.id)) {
+    if (await isUserExcluded(message.guildId, message.author.id)) {
       return;
     }
 
@@ -56,12 +56,12 @@ export class TransformMessageListener extends Listener<typeof Events.MessageCrea
       return;
     }
 
-    if (!consumeUwufiedMessage(message.guildId, message.author.id)) {
+    if (!(await consumeUwufiedMessage(message.guildId, message.author.id))) {
       return;
     }
 
     if (!(await this.rewrite(message, message.channel, uwu))) {
-      restoreUwufiedMessage(message.guildId, message.author.id);
+      await restoreUwufiedMessage(message.guildId, message.author.id);
     }
   }
 

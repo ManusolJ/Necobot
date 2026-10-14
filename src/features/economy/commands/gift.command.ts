@@ -49,7 +49,7 @@ export class GiftCommand extends Command {
       return;
     }
 
-    if (isUserExcluded(guildId, target.id)) {
+    if (await isUserExcluded(guildId, target.id)) {
       await interaction.reply({
         content: `<@${target.id}> está excluido de las actividades del bot. No acepto transferencias a cuentas congeladas.`,
         flags: MessageFlags.Ephemeral,
@@ -57,7 +57,7 @@ export class GiftCommand extends Command {
       return;
     }
 
-    const charged = transferPoints(guildId, member.id, target.id, amount);
+    const charged = await transferPoints(guildId, member.id, target.id, amount);
     if (!charged) {
       await interaction.reply({
         content: `Nyaha~ ¿regalando **${amount}** puntos sin tenerlos, ${member.displayName}? La generosidad de los pobres me conmueve, pero no.`,

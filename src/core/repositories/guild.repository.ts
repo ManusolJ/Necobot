@@ -1,59 +1,79 @@
 import { db } from "@infrastructure/database/client.js";
-import { guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
+import { guildState, guildChannels, guildSettings } from "@infrastructure/database/schema/guild.schema.js";
 
+import type { DbExecutor } from "@shared/types/db-executor.type.js";
+import type { GuildState } from "@shared/types/guild-state.type.js";
 import type { GuildChannel } from "@shared/types/guild-channel.type.js";
 import type { GuildSettings } from "@shared/types/guild-settings.type.js";
+import type { ChannelPurpose } from "@shared/types/channel-purpose.type.js";
 import type { GuildChannelInsert } from "@shared/types/guild-channel-insert.type.js";
 import type { GuildSettingsInsert } from "@shared/types/guild-settings-insert.type.js";
 
 import { and, eq, gt, sql } from "drizzle-orm";
 
-export function findGuildSettings(guildId: string): GuildSettings | undefined {
-  return db.select().from(guildSettings).where(eq(guildSettings.guildId, guildId)).get();
+export async function findGuildSettings(
+  guildId: string,
+  executor: DbExecutor = db,
+): Promise<GuildSettings | undefined> {
+  const [row] = await executor.select().from(guildSettings).where(eq(guildSettings.guildId, guildId));
+
+  return row;
 }
 
-export function incrementGuildMines(guildId: string, count: number): GuildSettings | undefined {
-  return db
-    .update(guildSettings)
-    .set({ activeMines: sql`${guildSettings.activeMines} + ${count}` })
-    .where(eq(guildSettings.guildId, guildId))
-    .returning()
-    .get();
+export async function findGuildState(guildId: string, executor: DbExecutor = db): Promise<GuildState | undefined> {
+  const [row] = await executor.select().from(guildState).where(eq(guildState.guildId, guildId));
+
+  return row;
 }
 
-export function consumeGuildMine(guildId: string): GuildSettings | undefined {
-  return db
-    .update(guildSettings)
-    .set({ activeMines: sql`${guildSettings.activeMines} - 1` })
-    .where(and(eq(guildSettings.guildId, guildId), gt(guildSettings.activeMines, 0)))
-    .returning()
-    .get();
+export async function incrementGuildMines(
+  guildId: string,
+  count: number,
+  executor: DbExecutor = db,
+): Promise<GuildState | undefined> {
+  const [row] = await executor
+    .update(guildState)
+    .set({ activeMines: sql`${guildState.activeMines} + ${count}` })
+    .where(eq(guildState.guildId, guildId))
+    .returning();
+
+  return row;
 }
 
-export function upsertGuildSettings(
+export async function consumeGuildMine(guildId: string, executor: DbExecutor = db): Promise<GuildState | undefined> {
+  const [row] = await executor
+    .update(guildState)
+    .set({ activeMines: sql`${guildState.activeMines} - 1` })
+    .where(and(eq(guildState.guildId, guildId), gt(guildState.activeMines, 0)))
+    .returning();
+
+  return row;
+}
+
+export async function upsertGuildSettings(
   settings: GuildSettingsInsert,
   updates: Partial<GuildSettingsInsert>,
-): GuildSettings | undefined {
-  if (Object.keys(updates).length === 0) {
-    return (
-      db.insert(guildSettings).values(settings).onConflictDoNothing().returning().get() ??
-      findGuildSettings(settings.guildId)
-    );
-  }
+  executor: DbExecutor = db,
+): Promise<GuildSettings | undefined> {
+  return executor.transaction(async (tx) => {
+    const insert = tx.insert(guildSettings).values(settings);
 
-  return db
-    .insert(guildSettings)
-    .values(settings)
-    .onConflictDoUpdate({
-      target: guildSettings.guildId,
-      set: updates,
-    })
-    .returning()
-    .get();
+    const [row] =
+      Object.keys(updates).length === 0
+        ? await insert.onConflictDoNothing().returning()
+        : await insert.onConflictDoUpdate({ target: guildSettings.guildId, set: updates }).returning();
+
+    await tx.insert(guildState).values({ guildId: settings.guildId }).onConflictDoNothing();
+
+    return row ?? findGuildSettings(settings.guildId, tx);
+  });
 }
 
-export function upsertGuildChannel(channel: GuildChannelInsert): GuildChannel | undefined {
-  const updated = db
+export async function upsertGuildChannel(
+  channel: GuildChannelInsert,
+  executor: DbExecutor = db,
+): Promise<GuildChannel | undefined> {
+  const [row] = await executor
     .insert(guildChannels)
     .values(channel)
     .onConflictDoUpdate({
@@ -62,17 +82,25 @@ export function upsertGuildChannel(channel: GuildChannelInsert): GuildChannel | 
     })
     .returning();
 
-  return updated.get();
+  return row;
 }
 
-export function findChannelsByPurpose(purpose: string): GuildChannel[] {
-  return db.select().from(guildChannels).where(eq(guildChannels.purpose, purpose)).all();
+export async function findChannelsByPurpose(
+  purpose: ChannelPurpose,
+  executor: DbExecutor = db,
+): Promise<GuildChannel[]> {
+  return executor.select().from(guildChannels).where(eq(guildChannels.purpose, purpose));
 }
 
-export function findGuildChannel(guildId: string, purpose: string): GuildChannel | undefined {
-  return db
+export async function findGuildChannel(
+  guildId: string,
+  purpose: ChannelPurpose,
+  executor: DbExecutor = db,
+): Promise<GuildChannel | undefined> {
+  const [row] = await executor
     .select()
     .from(guildChannels)
-    .where(and(eq(guildChannels.guildId, guildId), eq(guildChannels.purpose, purpose)))
-    .get();
+    .where(and(eq(guildChannels.guildId, guildId), eq(guildChannels.purpose, purpose)));
+
+  return row;
 }
