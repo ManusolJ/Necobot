@@ -12,7 +12,7 @@ It runs continuously on a private server and it's my testbed for whatever I want
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Sapphire](https://img.shields.io/badge/Sapphire-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://www.sapphirejs.dev/)
-[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL_17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Drizzle](https://img.shields.io/badge/Drizzle-C5F74F?style=for-the-badge&logo=drizzle&logoColor=black)](https://orm.drizzle.team/)
 [![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.com/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -90,13 +90,23 @@ New pieces are scaffolded with `npm run g:command`, `g:listener` and `g:precondi
 
 ### Persistence
 
-SQLite through **Drizzle**, with versioned migrations in `db/migrations` that run on
+PostgreSQL through **Drizzle**, with versioned migrations in `db/migrations` that run on
 startup. Migrations seemed overkill at first, but between the constant schema churn and
 the need to preserve points across deploys, they earned their place.
 
+The bot owns a `necobot` database on the server's shared Postgres instance, through its
+own role; it never connects as a superuser. It started on SQLite and moved in October
+2026, when a second process (the casino) needed to write the same points: two writers on
+one SQLite file meant `SQLITE_BUSY` traps and a synchronous driver stalling the event
+loop, while Postgres gives row locks, a connection pool and per-app permissions. The move
+also split the wide member table in three - `user_data` (who they are), `user_state`
+(balance and cooldowns) and `user_stats` (lifetime counters) - and the guild table in
+two, settings and state.
+
 All balance changes are guarded at the SQL level (a deduction only succeeds if the balance
 covers it; daily cooldowns are claimed atomically), so two quick invocations cannot both
-slip through. Games that hold stakes record them in a `game_sessions` table the moment
+slip through. Multi-step writes run in one transaction that every repository call joins,
+and a stake on an open game locks the session row first. Games that hold stakes record them in a `game_sessions` table the moment
 they are taken; if the process dies mid-game, the next boot refunds every open session
 and closes the message it left behind.
 
@@ -131,7 +141,8 @@ copypasta fetch.
 ### Quality
 
 Strict TypeScript, ESLint and Prettier. Unit tests mock the boundaries; integration tests
-run the real repositories against an in-memory SQLite with the real migrations. A drift
+run the real repositories against an in-process Postgres
+([PGlite](https://pglite.dev/)) with the real migrations, so no Docker is needed to test. A drift
 test fails whenever a command exists that `/info` does not list. CI runs typecheck, lint,
 format check, tests and the build on every push, and deploys `main` to the server over an
 SSH tunnel.
@@ -150,40 +161,44 @@ framework, the ORM and the job queue do their jobs.
 
 ## Tech stack
 
-| Layer          | Technology                                             |
-| :------------- | :----------------------------------------------------- |
-| **Language**   | TypeScript (strict), Node 22                           |
-| **Framework**  | Sapphire on discord.js                                 |
-| **Database**   | SQLite with Drizzle ORM and versioned migrations       |
-| **Jobs**       | BullMQ on Redis                                        |
-| **AI**         | Ollama (chat persona), transformers.js CLIP (vision)   |
-| **Voice**      | @discordjs/voice with ffmpeg                           |
-| **Quality**    | Vitest, ESLint, Prettier                               |
-| **CI**         | GitHub Actions                                         |
-| **Deployment** | Docker Compose, self-hosted on a personal Linux server |
+| Layer          | Technology                                              |
+| :------------- | :------------------------------------------------------ |
+| **Language**   | TypeScript (strict), Node 22                            |
+| **Framework**  | Sapphire on discord.js                                  |
+| **Database**   | PostgreSQL 17 with Drizzle ORM and versioned migrations |
+| **Jobs**       | BullMQ on Redis                                         |
+| **AI**         | Ollama (chat persona), transformers.js CLIP (vision)    |
+| **Voice**      | @discordjs/voice with ffmpeg                            |
+| **Quality**    | Vitest, ESLint, Prettier                                |
+| **CI**         | GitHub Actions                                          |
+| **Deployment** | Docker Compose, self-hosted on a personal Linux server  |
 
 ---
 
 ## Running it
 
-**Requirements:** Docker, and an Ollama instance reachable from the container. Redis is
-part of the compose file.
+**Requirements:** Docker, an Ollama instance reachable from the container, and a
+PostgreSQL database the bot can own. Redis is part of the compose file; Postgres is not.
+The bot joins an external Docker network called `homelab` and expects the database there,
+because on the server it is a separate stack shared with other projects.
 
 ```bash
 git clone https://github.com/ManusolJ/Necobot.git
 cd Necobot
 
-cp .env.example .env
-# BOT_TOKEN and OLLAMA_URL are required; the rest are optional or have defaults
+docker network create homelab
+docker run -d --name homelab-db --network homelab -e POSTGRES_USER=necobot \
+  -e POSTGRES_PASSWORD=necobot -e POSTGRES_DB=necobot postgres:17
 
-mkdir -p db/data
+cp .env.example .env
+# BOT_TOKEN, OLLAMA_URL, GOOGLE_BOOKS_API_KEY and DATABASE_URL are required, e.g.
+# DATABASE_URL=postgres://necobot:necobot@homelab-db:5432/necobot
 
 docker compose up --build
 ```
 
-The `mkdir` matters: the container runs as an unprivileged user and the SQLite file lives
-on a bind mount, so the directory has to exist first. Migrations run automatically on
-startup.
+Migrations run automatically on startup. The bot exits if the database is unreachable at
+boot, and `restart: unless-stopped` retries it.
 
 For in-character replies, build the persona model on the Ollama host. The bot requests it
 by name and the feature stays silent if it is missing:
@@ -192,8 +207,9 @@ by name and the feature stays silent if it is missing:
 ollama create necoarc -f ai/necoarc.Modelfile
 ```
 
-For local development without Docker you need Node 22, a Redis instance and the same
-`.env`:
+For local development without Docker you need Node 22, a Redis instance, a Postgres you
+can reach from the host (publish the container's port and point `DATABASE_URL` at
+`localhost`) and the same `.env`. Tests need none of it:
 
 ```bash
 npm install
