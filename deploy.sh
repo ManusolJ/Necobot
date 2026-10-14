@@ -17,7 +17,8 @@ echo "[3/5] Stopping bot..."
 docker compose stop bot
 
 echo "[4/5] Rebuilding and starting bot..."
-docker compose up -d --build --no-deps bot
+docker compose build --build-arg NODE_VERSION="$(cat .node-version)" bot
+docker compose up -d --no-deps bot
 
 echo "[5/5] Cleaning up old images..."
 docker image prune -f

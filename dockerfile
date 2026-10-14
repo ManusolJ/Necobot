@@ -1,4 +1,6 @@
-FROM node:22.16.0-bookworm-slim AS builder
+ARG NODE_VERSION
+
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -9,7 +11,7 @@ COPY tsconfig.build.json ./
 COPY src ./src
 RUN npm run build
 
-FROM node:22.16.0-bookworm-slim
+FROM node:${NODE_VERSION}-bookworm-slim
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg \
